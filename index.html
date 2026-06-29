@@ -266,13 +266,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="sec-hd">Last Check-in Photo</div>
         <div class="stamp-preview">
           <img id="last-photo-img" src="" alt="Check-in photo">
-          <div class="stamp-overlay">
-            <div class="stamp-time" id="lp-time"></div>
-            <div class="stamp-date" id="lp-date"></div>
-            <div class="stamp-loc" id="lp-loc"></div>
-            <div class="stamp-name" id="lp-name"></div>
-            <span class="stamp-type" id="lp-type"></span>
-          </div>
         </div>
       </div>
     </div>
@@ -763,14 +756,6 @@ function setUploadStatus(msg){
 function showStampPreview(photoData, timeStr, dateStr){
   document.getElementById('last-photo-wrap').style.display='block';
   document.getElementById('last-photo-img').src = photoData;
-  document.getElementById('lp-time').textContent = timeStr;
-  document.getElementById('lp-date').textContent = dateStr;
-  document.getElementById('lp-loc').innerHTML =
-    `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${gpsAddr||'—'}`;
-  document.getElementById('lp-name').textContent = engName;
-  const typeEl = document.getElementById('lp-type');
-  typeEl.textContent = currentCamType==='in'?'CHECK IN':'CHECK OUT';
-  typeEl.className = 'stamp-type '+(currentCamType==='in'?'stamp-type-in':'stamp-type-out');
 }
 
 // ── UI renders ──
