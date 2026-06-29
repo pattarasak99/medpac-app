@@ -445,8 +445,11 @@ function loadToday(){
     renderTodayList(); renderDashboard(); updateHomeStatus(); return;
   }
   db.ref('checkins/'+todayKey).on('value', snap=>{
-    todayRecords = [];
-    snap.forEach(child=>todayRecords.push({...child.val(), key:child.key}));
+    const fbRecords = [];
+    snap.forEach(child=>fbRecords.push({...child.val(), key:child.key}));
+    // Keep local records not yet in Firebase
+    const localRecords = todayRecords.filter(r=>r.key && r.key.startsWith('local_'));
+    todayRecords = [...fbRecords, ...localRecords];
     renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
   });
 }
@@ -463,21 +466,25 @@ function loadMyHistory(){
 }
 
 function saveRecord(record){
+  // Always update UI immediately
+  const localKey = 'local_' + Date.now().toString();
+  record._localKey = localKey;
+  todayRecords.push({...record, key:localKey});
+  renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+
+  // Also save to Firebase in background
   if(db){
-    // Save to Firebase - listener will update UI automatically
     db.ref('checkins/'+todayKey).push(record)
-      .then(()=>{ console.log('Firebase saved OK'); })
+      .then(ref=>{
+        // Replace local record with Firebase key
+        const idx = todayRecords.findIndex(r=>r.key===localKey);
+        if(idx>=0) todayRecords[idx].key = ref.key;
+        console.log('Firebase saved:', ref.key);
+      })
       .catch(err=>{
         console.error('Firebase save failed:', err);
-        // Fallback: save locally
-        todayRecords.push({...record, key:Date.now().toString()});
-        renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
-        showToast('⚠️ Saved locally - check connection');
+        showToast('⚠️ Offline — saved locally');
       });
-  } else {
-    // No Firebase - save locally
-    todayRecords.push({...record, key:Date.now().toString()});
-    renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
   }
 }
 
