@@ -470,11 +470,17 @@ function loadMyHistory(){
 }
 
 function saveRecord(record){
+  // Always update local state immediately for instant UI response
+  const localKey = Date.now().toString();
+  todayRecords.push({...record, key:localKey});
+  renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+  
+  // Also save to Firebase if available
   if(db){
-    db.ref('checkins/'+todayKey).push(record);
-  } else {
-    todayRecords.push({...record, key:Date.now().toString()});
-    renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+    db.ref('checkins/'+todayKey).push(record).catch(err=>{
+      console.error('Firebase save failed:', err);
+      showToast('⚠️ Record saved locally only');
+    });
   }
 }
 
