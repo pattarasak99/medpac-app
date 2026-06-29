@@ -522,7 +522,29 @@ function closeCamera(){
   document.getElementById('cam-modal').classList.add('hidden');
 }
 
-function snapPhoto(){
+async function loadMapTile(lat, lon){
+  // OpenStreetMap static tile — free, no API key
+  // Convert GPS to tile coordinates at zoom 15
+  const zoom = 15;
+  const n = Math.pow(2, zoom);
+  const xTile = Math.floor((parseFloat(lon) + 180) / 360 * n);
+  const latRad = parseFloat(lat) * Math.PI / 180;
+  const yTile = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
+
+  // Use a 3x3 grid of tiles for better coverage, center tile
+  const tileUrl = `https://tile.openstreetmap.org/${zoom}/${xTile}/${yTile}.png`;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = tileUrl;
+    setTimeout(() => resolve(null), 3000); // 3s timeout
+  });
+}
+
+async function snapPhoto(){
   const video = document.getElementById('cam-video');
   const canvas = document.getElementById('cam-canvas');
   const W = video.videoWidth||1280, H = video.videoHeight||960;
@@ -546,44 +568,98 @@ function snapPhoto(){
   ctx.fillStyle=grad;
   ctx.fillRect(0,H*0.65,W,H*0.35);
 
-  // Type badge
-  const bx=20, by=H-180, bw=typeStr.length*14+20, bh=36;
-  ctx.fillStyle=typeColor;
-  roundRect(ctx,bx,by,bw,bh,8);
-  ctx.fillStyle='#fff';
-  ctx.font=`bold ${Math.round(W*0.022)}px -apple-system,sans-serif`;
-  ctx.fillText(typeStr, bx+10, by+bh-10);
+  // Layout from bottom up with fixed spacing
+  const lh = Math.round(H * 0.045); // line height
+  const fs_sm = Math.round(W * 0.022);
+  const fs_md = Math.round(W * 0.028);
+  const fs_lg = Math.round(W * 0.065);
+  const pad = 20;
 
-  // Time
-  ctx.fillStyle='#ffffff';
-  ctx.font=`bold ${Math.round(W*0.075)}px -apple-system,sans-serif`;
-  ctx.fillText(timeStr, 20, H-110);
+  // MEDPAC watermark (bottom right)
+  ctx.font = `bold ${fs_sm}px -apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.textAlign = 'right';
+  ctx.fillText('MEDPAC Field Service', W-pad, H-pad);
+  ctx.textAlign = 'left';
 
-  // Date
-  ctx.font=`${Math.round(W*0.030)}px -apple-system,sans-serif`;
-  ctx.fillStyle='rgba(255,255,255,0.85)';
-  ctx.fillText(dateStr, 20, H-70);
-
-  // Name
-  ctx.font=`bold ${Math.round(W*0.028)}px -apple-system,sans-serif`;
-  ctx.fillStyle='#ffffff';
-  ctx.fillText(engName, 20, H-38);
-
-  // Location
-  if(gpsAddr && gpsAddr!=='Location unavailable'){
-    ctx.font=`${Math.round(W*0.022)}px -apple-system,sans-serif`;
-    ctx.fillStyle='rgba(255,255,255,0.70)';
-    const maxW = W-40;
-    const locText = '📍 ' + gpsAddr;
-    ctx.fillText(locText, 20, H-14, maxW);
+  // Location (2nd from bottom)
+  let curY = H - pad*2 - lh*0.5;
+  if(gpsAddr && gpsAddr !== 'Location unavailable'){
+    ctx.font = `${fs_sm}px -apple-system,sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('📍 ' + gpsAddr, pad, curY, W - pad*2);
+    curY -= lh;
   }
 
-  // MEDPAC watermark
-  ctx.font=`bold ${Math.round(W*0.022)}px -apple-system,sans-serif`;
-  ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.textAlign='right';
-  ctx.fillText('MEDPAC Field Service', W-20, H-14);
-  ctx.textAlign='left';
+  // Name
+  ctx.font = `bold ${fs_md}px -apple-system,sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(engName, pad, curY);
+  curY -= lh * 1.1;
+
+  // Date
+  ctx.font = `${fs_md}px -apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(dateStr, pad, curY);
+  curY -= lh * 1.6;
+
+  // Time (large)
+  ctx.font = `bold ${fs_lg}px -apple-system,sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(timeStr, pad, curY);
+  curY -= lh * 1.4;
+
+  // Draw map thumbnail in top-right corner if GPS available
+  if(gpsLat && gpsLon){
+    try{
+      const mapImg = await loadMapTile(gpsLat, gpsLon);
+      if(mapImg){
+        const mSize = Math.round(W * 0.22); // ~22% of width
+        const mX = W - mSize - 14;
+        const mY = 14;
+        // White border
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mX-3, mY-3, mSize+6, mSize+6);
+        // Draw map tile
+        ctx.drawImage(mapImg, mX, mY, mSize, mSize);
+        // Red dot at center (location marker)
+        const cx = mX + mSize/2, cy = mY + mSize/2;
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.arc(cx, cy-4, 6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.moveTo(cx-5, cy-4);
+        ctx.lineTo(cx+5, cy-4);
+        ctx.lineTo(cx, cy+4);
+        ctx.closePath();
+        ctx.fill();
+        // White circle inside marker
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx, cy-4, 2.5, 0, Math.PI*2);
+        ctx.fill();
+        // Small label
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(mX, mY+mSize-16, mSize, 16);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold 10px -apple-system,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('© OpenStreetMap', mX+mSize/2, mY+mSize-4);
+        ctx.textAlign = 'left';
+      }
+    } catch(e){ console.warn('Map load failed:', e); }
+  }
+
+  // Type badge
+  const bh = Math.round(H * 0.042);
+  const bw = typeStr.length * Math.round(W*0.016) + 24;
+  ctx.fillStyle = typeColor;
+  roundRect(ctx, pad, curY - bh + 6, bw, bh, 8);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fs_sm}px -apple-system,sans-serif`;
+  ctx.fillText(typeStr, pad + 10, curY - 4);
 
   // Medium size: max 600px, quality 0.55 — good balance of quality & speed
   const MAX_DIM = 600;
