@@ -585,7 +585,17 @@ function snapPhoto(){
   ctx.fillText('MEDPAC Field Service', W-20, H-14);
   ctx.textAlign='left';
 
-  const photoData = canvas.toDataURL('image/jpeg', 0.82);
+  // Medium size: max 600px, quality 0.55 — good balance of quality & speed
+  const MAX_DIM = 600;
+  let outCanvas = canvas;
+  if(W > MAX_DIM || H > MAX_DIM){
+    const ratio = Math.min(MAX_DIM/W, MAX_DIM/H);
+    outCanvas = document.createElement('canvas');
+    outCanvas.width = Math.round(W*ratio);
+    outCanvas.height = Math.round(H*ratio);
+    outCanvas.getContext('2d').drawImage(canvas,0,0,outCanvas.width,outCanvas.height);
+  }
+  const photoData = outCanvas.toDataURL('image/jpeg', 0.55);
   closeCamera();
   processCheckin(photoData, now, timeStr, dateStr);
 }
@@ -607,24 +617,10 @@ function roundRect(ctx,x,y,w,h,r){
 
 // ── Process check-in ──
 async function processCheckin(photoData, now, timeStr, dateStr){
-  // Show preview
+  // Show preview immediately
   showStampPreview(photoData, timeStr, dateStr);
 
-  // Upload photo to Drive
-  const filename = `MEDPAC_CI_${engName.replace(/\s/g,'_')}_${currentCamType.toUpperCase()}_${todayKey}_${timeStr.replace(/:/g,'')}.jpg`;
-  let photoUrl = '';
-
-  try{
-    setUploadStatus('Saving photo...');
-    photoUrl = await uploadPhotoToDrive(photoData, filename);
-    setUploadStatus('');
-  } catch(e){
-    setUploadStatus('');
-    console.warn('Photo upload failed:', e);
-    // Continue even if upload fails
-  }
-
-  // Save record
+  // Save record first (don't wait for upload)
   const record = {
     name: engName,
     type: currentCamType,
@@ -633,39 +629,47 @@ async function processCheckin(photoData, now, timeStr, dateStr){
     lat: gpsLat||'',
     lon: gpsLon||'',
     addr: gpsAddr||'',
-    photoUrl: photoUrl,
+    photoUrl: '',
     timestamp: Date.now()
   };
   saveRecord(record);
   showToast(currentCamType==='in'?`✅ Checked in at ${timeStr}`:`👋 Checked out at ${timeStr}`);
   loadMyHistory();
+
+  // Upload photo in background
+  const filename = `MEDPAC_CI_${engName.replace(/\s/g,'_')}_${currentCamType.toUpperCase()}_${todayKey}_${timeStr.replace(/:/g,'')}.jpg`;
+  let photoUrl = '';
+
+  try{
+    setUploadStatus('📤 Uploading photo...');
+    photoUrl = await uploadPhotoToDrive(photoData, filename);
+    setUploadStatus('✅ Photo saved to Drive!');
+    setTimeout(()=>setUploadStatus(''),3000);
+  } catch(e){
+    setUploadStatus('⚠️ Photo upload failed — record saved');
+    setTimeout(()=>setUploadStatus(''),4000);
+    console.warn('Photo upload failed:', e);
+    return;
+  }
+
 }
 
 async function uploadPhotoToDrive(dataUrl, filename){
-  // Convert to blob then upload via Apps Script chunked upload
+  // Direct single POST — no chunking needed for medium-size photos
   const base64 = dataUrl.split(',')[1];
-  const CHUNK = 100000;
-  const total = Math.ceil(base64.length/CHUNK);
-  const uid = Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-
-  for(let i=0;i<total;i++){
-    const chunk = base64.slice(i*CHUNK,(i+1)*CHUNK);
-    const gasUrl = APPS_SCRIPT_URL+'?action=chunk&uid='+uid+'&i='+i+'&total='+total+'&filename='+encodeURIComponent(filename);
-    const proxyUrl = WORKER_URL+'/?url='+encodeURIComponent(gasUrl);
-    const resp = await fetch(proxyUrl,{
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'data='+encodeURIComponent(chunk)
-    });
-    const txt = await resp.text();
-    const json = JSON.parse(txt);
-    if(json.status!=='ok') throw new Error('Chunk failed: '+json.message);
-  }
-  const aUrl = APPS_SCRIPT_URL+'?action=assemble&uid='+uid+'&filename='+encodeURIComponent(filename)+'&total='+total;
-  const aResp = await fetch(WORKER_URL+'/?url='+encodeURIComponent(aUrl));
-  const aJson = JSON.parse(await aResp.text());
-  if(aJson.status!=='ok') throw new Error('Assemble failed');
-  return `https://drive.google.com/drive/folders/${DRIVE_FOLDER}`;
+  const gasUrl = APPS_SCRIPT_URL + '?action=savePhoto'
+    + '&filename=' + encodeURIComponent(filename)
+    + '&eng=' + encodeURIComponent(engName);
+  const proxyUrl = WORKER_URL + '/?url=' + encodeURIComponent(gasUrl);
+  const resp = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'data=' + encodeURIComponent(base64)
+  });
+  const txt = await resp.text();
+  const json = JSON.parse(txt);
+  if(json.status !== 'ok') throw new Error(json.message || 'Upload failed');
+  return json.url || '';
 }
 
 function setUploadStatus(msg){
