@@ -336,7 +336,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <canvas id="cam-canvas"></canvas>
   <div class="cam-bottom">
     <button class="cam-cancel-btn" onclick="closeCamera()">Cancel</button>
-    <button class="cam-snap" onclick="snapPhoto()" title="Take Photo">
+    <button class="cam-snap" onclick="handleSnap()" title="Take Photo">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="#185FA5"/></svg>
     </button>
     <button class="cam-cancel-btn" onclick="flipCamera()">🔄 Flip</button>
@@ -519,6 +519,13 @@ function flipCamera(){ useFrontCam=!useFrontCam; openCameraStream(); }
 function closeCamera(){
   if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
   document.getElementById('cam-modal').classList.add('hidden');
+}
+
+function handleSnap(){
+  snapPhoto().catch(e=>{
+    console.error('snapPhoto error:', e);
+    showToast('Error: ' + e.message);
+  });
 }
 
 async function loadMapTile(lat, lon){
@@ -708,6 +715,12 @@ async function processCheckin(photoData, now, timeStr, dateStr){
     timestamp: Date.now()
   };
   saveRecord(record);
+  // Force UI update
+  setTimeout(()=>{
+    updateCiStatus();
+    updateHomeStatus();
+    renderTodayList();
+  }, 100);
   showToast(currentCamType==='in'?`✅ Checked in at ${timeStr}`:`👋 Checked out at ${timeStr}`);
   loadMyHistory();
 
