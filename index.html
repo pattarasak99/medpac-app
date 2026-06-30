@@ -193,12 +193,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
   <div class="name-input-box">
     <div class="name-input-row">
-      <input type="text" id="eng-name-input" placeholder="Your name (e.g. Pattarasak J.)" maxlength="40" autocomplete="name" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmName();}">
+      <input type="text" id="eng-name-input" placeholder="Your name (e.g. Pattarasak J.)" maxlength="40" autocomplete="name" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmName();document.getElementById('eng-name-input').blur();}" oninput="onNameInputChange()">
       <button onclick="confirmName()">Set</button>
     </div>
   </div>
 
-  <div style="padding:0 16px 8px;max-width:480px;margin:0 auto;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Quick Actions</div>
+  <div id="quick-actions-label" style="padding:0 16px 8px;max-width:480px;margin:0 auto;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Quick Actions</div>
   <div class="action-grid">
     <div class="action-card" onclick="goCheckin('in')">
       <div class="action-icon" style="background:var(--green-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#1A9E6A" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
@@ -430,6 +430,15 @@ function confirmName(){
   showToast('✅ Name set: ' + v);
   document.getElementById('eng-name-input').blur();
 }
+function onNameInputChange(){
+  const v = document.getElementById('eng-name-input').value.trim();
+  const label = document.getElementById('quick-actions-label');
+  if(v && !engName){
+    label.innerHTML = 'Quick Actions <span style="color:var(--blue);font-weight:700">— tap any action to confirm name</span>';
+  } else {
+    label.textContent = 'Quick Actions';
+  }
+}
 function setName(name){
   engName = name;
   localStorage.setItem('medpac_eng_name', name);
@@ -528,6 +537,7 @@ function saveRecord(record){
 
 // ── Camera ──
 function goCheckin(type){
+  document.getElementById('eng-name-input').blur(); // dismiss keyboard
   // Auto-confirm name if typed in input but not yet set
   if(!engName){
     const typedName = document.getElementById('eng-name-input').value.trim();
