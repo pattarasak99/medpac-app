@@ -1124,8 +1124,7 @@ async function generateReport(){
   });
 
   // Convert to CSV string
-  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('
-');
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
 
   // Show preview table
   const previewCard = document.getElementById('report-preview-card');
