@@ -326,10 +326,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         </select>
       </div>
       <div style="height:12px"></div>
-      <button onclick="generateReport()" style="width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export CSV
-      </button>
+      <div style="display:flex;gap:8px">
+        <button onclick="viewMonthlyHistory()" style="flex:1;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          View History
+        </button>
+        <button onclick="generateReport()" style="flex:1;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="monthly-history-card" style="display:none">
+      <div class="sec-hd">Daily History <span id="mh-month-label" style="font-weight:400;color:var(--muted);font-size:12px"></span></div>
+      <div id="monthly-history-list"></div>
     </div>
 
     <div class="card" id="report-preview-card" style="display:none">
@@ -1028,6 +1039,84 @@ function initReportSelectors(){
     yearSel.appendChild(opt);
   }
   yearSel.value = now.getFullYear();
+}
+
+async function viewMonthlyHistory(){
+  const month = parseInt(document.getElementById('report-month').value);
+  const year = parseInt(document.getElementById('report-year').value);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = monthNames[month-1];
+
+  const historyCard = document.getElementById('monthly-history-card');
+  const historyList = document.getElementById('monthly-history-list');
+  const monthLabel = document.getElementById('mh-month-label');
+
+  historyCard.style.display = 'block';
+  monthLabel.textContent = monthName + ' ' + year;
+  historyList.innerHTML = '<div class="empty">⏳ Loading...</div>';
+  document.getElementById('report-preview-card').style.display = 'none';
+
+  if(!db){ historyList.innerHTML = '<div class="empty">Firebase not connected</div>'; return; }
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dates = [];
+  for(let d=1; d<=daysInMonth; d++){
+    const dd = String(d).padStart(2,'0');
+    const mm = String(month).padStart(2,'0');
+    dates.push(`${year}-${mm}-${dd}`);
+  }
+
+  const snaps = await Promise.all(dates.map(date=>db.ref('checkins/'+date).once('value')));
+
+  // Build: date -> [{name, type, time}]
+  const byDate = {};
+  let hasAnyData = false;
+
+  snaps.forEach((snap, idx)=>{
+    const date = dates[idx];
+    const dayRecords = {}; // name -> {in, out}
+    snap.forEach(child=>{
+      const r = child.val();
+      if(!r.name) return;
+      hasAnyData = true;
+      if(!dayRecords[r.name]) dayRecords[r.name] = {in:'', out:''};
+      if(r.type==='in') dayRecords[r.name].in = r.time;
+      if(r.type==='out') dayRecords[r.name].out = r.time;
+    });
+    if(Object.keys(dayRecords).length > 0){
+      byDate[date] = dayRecords;
+    }
+  });
+
+  if(!hasAnyData){
+    historyList.innerHTML = '<div class="empty">No check-in records for '+monthName+' '+year+'</div>';
+    return;
+  }
+
+  // Render grouped by day, most recent first
+  const sortedDates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  historyList.innerHTML = sortedDates.map(date=>{
+    const d = new Date(date+'T00:00:00');
+    const dayLabel = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const engineers = Object.entries(byDate[date]).sort((a,b)=>a[0].localeCompare(b[0]));
+
+    const engineerRows = engineers.map(([name, rec])=>{
+      const hrs = (rec.in && rec.out) ? calcDur(rec.in, rec.out) : '';
+      const statusBadge = rec.out ? 'badge-gray' : rec.in ? 'badge-green' : 'badge-gray';
+      const statusText = rec.out ? 'Done' : rec.in ? 'Active' : '—';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+        <div style="flex:1;font-size:13px;font-weight:600">${name}</div>
+        <div style="font-size:12px;color:var(--green);width:54px">${rec.in?'▶ '+rec.in:''}</div>
+        <div style="font-size:12px;color:var(--red);width:54px">${rec.out?'■ '+rec.out:''}</div>
+        <div style="font-size:11px;color:var(--muted);width:50px;text-align:right">${hrs}</div>
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px">📅 ${dayLabel}</div>
+      ${engineerRows}
+    </div>`;
+  }).join('');
 }
 
 async function generateReport(){
