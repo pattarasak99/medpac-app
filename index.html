@@ -82,7 +82,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .name-input-row{display:flex;gap:8px}
 .name-input-row input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--white);color:var(--text)}
 .name-input-row input:focus{outline:none;border-color:var(--blue)}
-.name-input-row button{padding:11px 18px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.name-input-row button{padding:11px 22px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .15s}
+.name-input-row button:active{transform:scale(.95)}
 
 .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;max-width:480px;margin:0 auto}
 .action-card{background:var(--white);border-radius:var(--r);padding:16px 14px;cursor:pointer;border:1px solid var(--border);box-shadow:var(--sh);transition:transform .12s}
@@ -192,7 +193,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
   <div class="name-input-box">
     <div class="name-input-row">
-      <input type="text" id="eng-name-input" placeholder="Your name (e.g. Pattarasak J.)" maxlength="40" autocomplete="name">
+      <input type="text" id="eng-name-input" placeholder="Your name (e.g. Pattarasak J.)" maxlength="40" autocomplete="name" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmName();}">
       <button onclick="confirmName()">Set</button>
     </div>
   </div>
@@ -427,6 +428,7 @@ function confirmName(){
   if(!v){ showToast('Please enter your name'); return; }
   setName(v);
   showToast('✅ Name set: ' + v);
+  document.getElementById('eng-name-input').blur();
 }
 function setName(name){
   engName = name;
@@ -526,13 +528,33 @@ function saveRecord(record){
 
 // ── Camera ──
 function goCheckin(type){
-  if(!engName){ showToast('Set your name first'); focusNameInput(); return; }
+  // Auto-confirm name if typed in input but not yet set
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){
+      setName(typedName);
+      showToast('✅ Name set: ' + typedName);
+    } else {
+      showToast('Please enter your name first');
+      focusNameInput();
+      return;
+    }
+  }
   switchScreen('checkin');
   setTimeout(()=>startCamera(type), 300);
 }
 
 async function startCamera(type){
-  if(!engName){ showToast('Set your name first'); focusNameInput(); return; }
+  // Auto-confirm name if typed but not set
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){
+      setName(typedName);
+      showToast('✅ Name set: ' + typedName);
+    } else {
+      showToast('Set your name first'); focusNameInput(); return;
+    }
+  }
 
   // Validate type
   const myIn = todayRecords.find(r=>r.name===engName&&r.type==='in');
@@ -948,7 +970,11 @@ function switchScreen(name){
   window.scrollTo(0,0);
 }
 function openServiceReport(){
-  if(!engName){ showToast('Set your name first'); focusNameInput(); return; }
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){ setName(typedName); }
+    else { showToast('Set your name first'); focusNameInput(); return; }
+  }
   window.open(SERVICE_REPORT_URL,'_blank');
 }
 
