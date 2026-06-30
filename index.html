@@ -1074,14 +1074,24 @@ async function viewMonthlyHistory(){
 
   snaps.forEach((snap, idx)=>{
     const date = dates[idx];
-    const dayRecords = {}; // name -> {in, out}
+    const dayRecords = {}; // name -> {in, out, inAddr, outAddr, inLat, inLon, outLat, outLon}
     snap.forEach(child=>{
       const r = child.val();
       if(!r.name) return;
       hasAnyData = true;
-      if(!dayRecords[r.name]) dayRecords[r.name] = {in:'', out:''};
-      if(r.type==='in') dayRecords[r.name].in = r.time;
-      if(r.type==='out') dayRecords[r.name].out = r.time;
+      if(!dayRecords[r.name]) dayRecords[r.name] = {in:'', out:'', inAddr:'', outAddr:'', inLat:'', inLon:'', outLat:'', outLon:''};
+      if(r.type==='in'){
+        dayRecords[r.name].in = r.time;
+        dayRecords[r.name].inAddr = r.addr||'';
+        dayRecords[r.name].inLat = r.lat||'';
+        dayRecords[r.name].inLon = r.lon||'';
+      }
+      if(r.type==='out'){
+        dayRecords[r.name].out = r.time;
+        dayRecords[r.name].outAddr = r.addr||'';
+        dayRecords[r.name].outLat = r.lat||'';
+        dayRecords[r.name].outLon = r.lon||'';
+      }
     });
     if(Object.keys(dayRecords).length > 0){
       byDate[date] = dayRecords;
@@ -1102,13 +1112,23 @@ async function viewMonthlyHistory(){
 
     const engineerRows = engineers.map(([name, rec])=>{
       const hrs = (rec.in && rec.out) ? calcDur(rec.in, rec.out) : '';
-      const statusBadge = rec.out ? 'badge-gray' : rec.in ? 'badge-green' : 'badge-gray';
-      const statusText = rec.out ? 'Done' : rec.in ? 'Active' : '—';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
-        <div style="flex:1;font-size:13px;font-weight:600">${name}</div>
-        <div style="font-size:12px;color:var(--green);width:54px">${rec.in?'▶ '+rec.in:''}</div>
-        <div style="font-size:12px;color:var(--red);width:54px">${rec.out?'■ '+rec.out:''}</div>
-        <div style="font-size:11px;color:var(--muted);width:50px;text-align:right">${hrs}</div>
+      const inMapLink = (rec.inLat && rec.inLon) ? `https://www.openstreetmap.org/?mlat=${rec.inLat}&mlon=${rec.inLon}#map=17/${rec.inLat}/${rec.inLon}` : '';
+      const outMapLink = (rec.outLat && rec.outLon) ? `https://www.openstreetmap.org/?mlat=${rec.outLat}&mlon=${rec.outLon}#map=17/${rec.outLat}/${rec.outLon}` : '';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;font-size:13px;font-weight:600">${name}</div>
+          <div style="font-size:12px;color:var(--green);width:54px">${rec.in?'▶ '+rec.in:''}</div>
+          <div style="font-size:12px;color:var(--red);width:54px">${rec.out?'■ '+rec.out:''}</div>
+          <div style="font-size:11px;color:var(--muted);width:50px;text-align:right">${hrs}</div>
+        </div>
+        ${rec.inAddr?`<div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          In: ${rec.inAddr} ${inMapLink?`<a href="${inMapLink}" target="_blank" style="color:var(--blue);font-weight:600">View map ↗</a>`:''}
+        </div>`:''}
+        ${rec.outAddr?`<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Out: ${rec.outAddr} ${outMapLink?`<a href="${outMapLink}" target="_blank" style="color:var(--blue);font-weight:600">View map ↗</a>`:''}
+        </div>`:''}
       </div>`;
     }).join('');
 
