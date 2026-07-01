@@ -577,12 +577,10 @@ async function startCamera(type){
     }
   }
 
-  // Validate type
-  const myIn = todayRecords.find(r=>r.name===engName&&r.type==='in');
-  const myOut = todayRecords.find(r=>r.name===engName&&r.type==='out');
-  if(type==='in'&&myIn){ showToast('Already checked in today'); return; }
-  if(type==='out'&&!myIn){ showToast('Check in first'); return; }
-  if(type==='out'&&myOut){ showToast('Already checked out today'); return; }
+  // Validate - only prevent check-out if never checked in today at all
+  const myRecords = todayRecords.filter(r=>r.name===engName);
+  const myIns = myRecords.filter(r=>r.type==='in');
+  if(type==='out' && myIns.length===0){ showToast('Please check in first'); return; }
 
   currentCamType = type;
   document.getElementById('cam-title').textContent = type==='in'?'📷 Check In Photo':'📷 Check Out Photo';
@@ -864,58 +862,73 @@ function showStampPreview(photoData, timeStr, dateStr){
 // ── UI renders ──
 function updateHomeStatus(){
   if(!engName) return;
-  const myIn = todayRecords.find(r=>r.name===engName&&r.type==='in');
-  const myOut = todayRecords.find(r=>r.name===engName&&r.type==='out');
+  const myRecs = todayRecords.filter(r=>r.name===engName).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  const myIns = myRecs.filter(r=>r.type==='in');
+  const myOuts = myRecs.filter(r=>r.type==='out');
+  const lastRec = myRecs[myRecs.length-1];
+  const firstIn = myIns[0];
+  const lastOut = myOuts[myOuts.length-1];
   document.getElementById('home-ci-status').textContent =
-    myIn ? `✓ In at ${myIn.time}` : 'Not checked in';
+    myIns.length>0 ? `✓ ${myIns.length}x In (first: ${firstIn.time})` : 'Not checked in';
   document.getElementById('home-ci-status').style.color =
-    myIn ? 'var(--green)' : 'var(--muted)';
+    myIns.length>0 ? 'var(--green)' : 'var(--muted)';
   document.getElementById('home-co-status').textContent =
-    myOut ? `✓ Out at ${myOut.time}` : myIn ? 'Tap to check out' : '—';
+    myOuts.length>0 ? `✓ ${myOuts.length}x Out (last: ${lastOut.time})` : myIns.length>0 ? 'Tap to check out' : '—';
   document.getElementById('home-co-status').style.color =
-    myOut ? 'var(--red)' : 'var(--muted)';
+    myOuts.length>0 ? 'var(--red)' : 'var(--muted)';
 }
 
 function updateCiStatus(){
   if(!engName) return;
-  const myIn = todayRecords.find(r=>r.name===engName&&r.type==='in');
-  const myOut = todayRecords.find(r=>r.name===engName&&r.type==='out');
+  const myRecs = todayRecords.filter(r=>r.name===engName).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  const myIns = myRecs.filter(r=>r.type==='in');
+  const myOuts = myRecs.filter(r=>r.type==='out');
   const badge = document.getElementById('ci-status-badge');
   const text = document.getElementById('ci-status-text');
   const btnIn = document.getElementById('ci-btn-in');
   const btnOut = document.getElementById('ci-btn-out');
+  const lastRec = myRecs[myRecs.length-1];
 
-  if(!myIn){
+  if(myRecs.length===0){
     badge.innerHTML='<span class="badge badge-gray">Not checked in</span>';
     text.textContent='Tap Check In to start your day';
     btnIn.disabled=false; btnOut.disabled=true;
-  } else if(!myOut){
+  } else if(lastRec.type==='in'){
     badge.innerHTML='<span class="badge badge-green">✓ Checked In</span>';
-    text.textContent=`In at ${myIn.time} — tap Check Out when done`;
-    btnIn.disabled=true; btnOut.disabled=false;
+    text.textContent=`Last check-in at ${lastRec.time} (${myRecs.length} record${myRecs.length>1?'s':''} today)`;
+    btnIn.disabled=false; btnOut.disabled=false;
   } else {
-    badge.innerHTML='<span class="badge badge-blue">Day Complete</span>';
-    text.textContent=`In: ${myIn.time}  →  Out: ${myOut.time}`;
-    btnIn.disabled=true; btnOut.disabled=true;
+    badge.innerHTML='<span class="badge badge-amber">Checked Out</span>';
+    text.textContent=`Last check-out at ${lastRec.time} (${myRecs.length} record${myRecs.length>1?'s':''} today)`;
+    btnIn.disabled=false; btnOut.disabled=false;
   }
 }
 
 function renderTodayList(){
   const el=document.getElementById('home-today-list');
-  const today=todayRecords.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
-  if(!today.length){ el.innerHTML='<div class="empty">No check-ins yet today</div>'; return; }
-  // Group by name
+  if(!todayRecords.length){ el.innerHTML='<div class="empty">No check-ins yet today</div>'; return; }
+  // Group by name, show all events
   const byName={};
-  today.forEach(r=>{ if(!byName[r.name])byName[r.name]={}; byName[r.name][r.type]=r; });
+  todayRecords.forEach(r=>{
+    if(!byName[r.name]) byName[r.name]=[];
+    byName[r.name].push(r);
+  });
+  Object.values(byName).forEach(recs=>recs.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)));
   el.innerHTML=Object.entries(byName).map(([name,recs])=>{
-    const inR=recs.in, outR=recs.out;
+    const ins=recs.filter(r=>r.type==='in');
+    const outs=recs.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    const isActive=recs[recs.length-1].type==='in';
+    const hrs=firstIn&&lastOut?calcDur(firstIn.time,lastOut.time):'';
+    const events=recs.map(r=>`<span style="color:${r.type==='in'?'var(--green)':'var(--red)'};">${r.type==='in'?'▶':'■'} ${r.time}</span>`).join(' ');
     return `<div class="hist-row">
-      <div class="hist-dot ${outR?'hist-dot-gray':'hist-dot-in'}"></div>
+      <div class="hist-dot ${isActive?'hist-dot-in':'hist-dot-gray'}"></div>
       <div class="hist-body">
         <div class="hist-name">${name}</div>
-        <div class="hist-sub">${inR?`In: ${inR.time}`:''} ${outR?`→ Out: ${outR.time}`:''}</div>
+        <div class="hist-sub" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:3px">${events}</div>
+        ${hrs?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Total: ${hrs}</div>`:''}
       </div>
-      <span class="badge ${outR?'badge-gray':'badge-green'}">${outR?'Done':'Active'}</span>
+      <span class="badge ${isActive?'badge-green':'badge-gray'}">${isActive?'Active':'Done'}</span>
     </div>`;
   }).join('');
 }
@@ -923,22 +936,34 @@ function renderTodayList(){
 function renderMyHistory(recs){
   const el=document.getElementById('ci-history');
   if(!recs.length){ el.innerHTML='<div class="empty">No records in last 7 days</div>'; return; }
-  // Group by date
+  // Group by date, show ALL events
   const byDate={};
-  recs.forEach(r=>{ if(!byDate[r.date])byDate[r.date]={}; byDate[r.date][r.type]=r; });
-  el.innerHTML=Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,recs])=>{
-    const inR=recs.in,outR=recs.out;
-    const dur=inR&&outR?calcDur(inR.time,outR.time):'';
+  recs.forEach(r=>{
+    if(!byDate[r.date]) byDate[r.date]=[];
+    byDate[r.date].push(r);
+  });
+  Object.values(byDate).forEach(d=>d.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)));
+  el.innerHTML=Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,dayRecs])=>{
+    const ins=dayRecs.filter(r=>r.type==='in');
+    const outs=dayRecs.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    const isActive=dayRecs[dayRecs.length-1].type==='in';
+    const dur=firstIn&&lastOut?calcDur(firstIn.time,lastOut.time):'';
+    const events=dayRecs.map(r=>`
+      <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+        <span style="font-size:12px;font-weight:700;color:${r.type==='in'?'var(--green)':'var(--red)'}">${r.type==='in'?'▶ CHECK IN':'■ CHECK OUT'}</span>
+        <span style="font-size:12px;color:var(--text)">${r.time}</span>
+        ${r.photoUrl?`<a href="${r.photoUrl}" target="_blank" style="font-size:11px;color:var(--blue)">📷</a>`:''}
+      </div>`).join('');
     return `<div class="hist-row">
-      <div class="hist-dot ${outR?'hist-dot-gray':'hist-dot-in'}"></div>
-      <div class="hist-body">
-        <div class="hist-name">${formatDateShort(date)}</div>
-        <div class="hist-sub">${date}${dur?' · '+dur:''}</div>
-        ${inR&&inR.photoUrl?`<a href="${inR.photoUrl}" target="_blank" style="font-size:11px;color:var(--blue)">📷 View photo</a>`:''}
-      </div>
-      <div class="hist-right">
-        ${inR?`<div class="hist-time-in">▶ ${inR.time}</div>`:''}
-        ${outR?`<div class="hist-time-out">■ ${outR.time}</div>`:'<div style="font-size:12px;color:var(--muted)">pending</div>'}
+      <div class="hist-dot ${isActive?'hist-dot-in':'hist-dot-gray'}"></div>
+      <div class="hist-body" style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="hist-name">${formatDateShort(date)}</div>
+          ${dur?`<span style="font-size:11px;color:var(--muted)">${dur}</span>`:'<span style="font-size:11px;color:var(--muted)">${isActive?"active":"—"}</span>'}
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${date} · ${dayRecs.length} record${dayRecs.length>1?'s':''}</div>
+        ${events}
       </div>
     </div>`;
   }).join('');
@@ -1008,8 +1033,9 @@ function calcDur(inT,outT){
   try{
     const [ih,im]=inT.split(':').map(Number);
     const [oh,om]=outT.split(':').map(Number);
-    const mins=(oh*60+om)-(ih*60+im);
-    if(mins<0) return '';
+    let mins=(oh*60+om)-(ih*60+im);
+    if(mins<0) mins+=24*60; // overnight shift — add 24 hours
+    if(mins<=0) return '';
     return Math.floor(mins/60)+'h '+(mins%60)+'m';
   }catch(e){return '';}
 }
