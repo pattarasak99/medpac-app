@@ -171,6 +171,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 .empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px}
 .divh{height:10px}
+
+/* Modal overlay */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal-overlay.hidden{display:none}
+.modal-sheet{background:var(--white);border-radius:20px 20px 0 0;padding:20px 16px;width:100%;max-width:480px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+
+/* Weekly plan grid */
+.wp-grid-header{display:grid;font-size:11px;font-weight:700;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:6px}
+.wp-cell{padding:3px 2px;min-height:32px;border-radius:6px;margin:2px;font-size:10px;cursor:pointer;text-align:center;line-height:1.3}
+.wp-cell-planned{background:#DBEAFE;color:#1D4ED8}
+.wp-cell-in-progress{background:#FEF3C7;color:#B45309}
+.wp-cell-done{background:#D1FAE5;color:#065F46}
+.wp-cell-empty{background:var(--surface);color:var(--muted)}
 </style>
 </head>
 <body>
@@ -215,10 +228,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="action-label">Service Report</div>
       <div class="action-sub">Create & save PDF</div>
     </div>
-    <div class="action-card" onclick="showToast('Coming soon!')">
+    <div class="action-card" onclick="switchScreen('weekly-plan')">
       <div class="action-icon" style="background:var(--amber-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/></svg></div>
       <div class="action-label">Weekly Plan</div>
-      <div class="action-sub">Coming soon</div>
+      <div class="action-sub">Team schedule</div>
     </div>
   </div>
 
@@ -349,6 +362,171 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
 
     <div id="report-status" style="text-align:center;padding:20px;color:var(--muted);font-size:13px"></div>
+  </div>
+</div>
+
+<!-- WEEKLY PLAN -->
+<div id="weekly-plan-screen" class="screen">
+  <div style="background:linear-gradient(135deg,var(--amber) 0%,#B45309 100%);padding:16px;text-align:center">
+    <div style="font-size:17px;font-weight:700;color:#fff" id="wp-screen-title">📅 Weekly Plan</div>
+    <div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:4px" id="wp-week-label"></div>
+    <div id="wp-week-nav" style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:10px">
+      <button onclick="changeWeek(-1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%">‹</button>
+      <span style="color:#fff;font-size:13px;font-weight:600" id="wp-week-range"></span>
+      <button onclick="changeWeek(1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%">›</button>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button id="wp-tab-plan" onclick="switchWpTab('plan')" style="padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--amber)">📅 Weekly Plan</button>
+      <button id="wp-tab-jobs" onclick="switchWpTab('jobs')" style="padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.25);color:#fff">📋 Job List</button>
+    </div>
+  </div>
+
+  <!-- Weekly Plan Tab -->
+  <div id="wp-plan-tab" class="page-body">
+    <button onclick="openAddPlan()" style="width:100%;padding:12px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Plan
+    </button>
+    <div class="card" style="padding:10px;overflow-x:auto">
+      <div id="wp-grid"></div>
+    </div>
+    <div class="card">
+      <div class="sec-hd">My Plans This Week</div>
+      <div id="wp-my-list"><div class="empty">No plans yet</div></div>
+    </div>
+  </div>
+
+  <!-- Job List Tab -->
+  <div id="wp-jobs-tab" class="page-body" style="display:none">
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px">
+      <button id="jf-all" onclick="filterJobs('all')" style="padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;white-space:nowrap">All</button>
+      <button id="jf-pending" onclick="filterJobs('pending')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🔴 Pending</button>
+      <button id="jf-in-progress" onclick="filterJobs('in-progress')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟡 In Progress</button>
+      <button id="jf-done" onclick="filterJobs('done')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟢 Done</button>
+    </div>
+
+    <button onclick="openAddJob()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Job
+    </button>
+
+    <div id="job-list-container"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Plan Modal -->
+<div class="modal-overlay hidden" id="wp-modal" onclick="closeWpModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px" id="wp-modal-title">Add Plan</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Engineer *</label>
+        <input type="text" id="wp-eng" placeholder="Engineer name" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Date *</label>
+        <input type="date" id="wp-date" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Customer *</label>
+        <input type="text" id="wp-customer" placeholder="Customer name" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Type *</label>
+        <select id="wp-jobtype" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="PM">PM (Preventive Maintenance)</option>
+          <option value="Repair">Repair</option>
+          <option value="Installation">Installation</option>
+          <option value="Training">Training</option>
+          <option value="Inspection">Inspection</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Equipment / Machine</label>
+        <input type="text" id="wp-equipment" placeholder="Equipment name (optional)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Note</label>
+        <textarea id="wp-note" placeholder="Additional notes..." rows="2" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;resize:none"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Status</label>
+        <select id="wp-status" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="planned">🔵 Planned</option>
+          <option value="in-progress">🟡 In Progress</option>
+          <option value="done">🟢 Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button onclick="savePlan()" style="width:100%;padding:14px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Save Plan</button>
+    <div style="height:8px"></div>
+    <button id="wp-delete-btn" onclick="deletePlan()" style="display:none;width:100%;padding:14px;background:var(--red-lt);color:var(--red);border:1px solid var(--red);border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Delete Plan</button>
+    <div style="height:8px"></div>
+    <button onclick="closeWpModal()" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- Add/Edit Job Modal -->
+<div class="modal-overlay hidden" id="job-modal" onclick="closeJobModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px" id="job-modal-title">Add Job</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Title *</label>
+        <input type="text" id="job-title" placeholder="e.g. Replace filter at BLC" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Customer / Location</label>
+        <input type="text" id="job-customer" placeholder="Customer name or location" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Type</label>
+        <select id="job-type" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="PM">PM (Preventive Maintenance)</option>
+          <option value="Repair">Repair</option>
+          <option value="Installation">Installation</option>
+          <option value="Training">Training</option>
+          <option value="Inspection">Inspection</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Assign To (optional)</label>
+        <input type="text" id="job-assignee" placeholder="Leave blank = open for anyone" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Due Date (optional)</label>
+        <input type="date" id="job-due" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Description</label>
+        <textarea id="job-desc" placeholder="Details about the job..." rows="3" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;resize:none"></textarea>
+      </div>
+      <div id="job-status-row">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Status</label>
+        <select id="job-status" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="pending">🔴 Pending</option>
+          <option value="in-progress">🟡 In Progress</option>
+          <option value="done">🟢 Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button onclick="saveJob()" style="width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Save Job</button>
+    <div style="height:8px"></div>
+    <button id="job-delete-btn" onclick="deleteJob()" style="display:none;width:100%;padding:14px;background:var(--red-lt);color:var(--red);border:1px solid var(--red);border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Delete Job</button>
+    <div style="height:8px"></div>
+    <button onclick="closeJobModal()" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer">Cancel</button>
   </div>
 </div>
 
@@ -1078,6 +1256,7 @@ function switchScreen(name){
   document.getElementById('nav-'+name)?.classList.add('active');
   if(name==='checkin') updateCiStatus();
   if(name==='dashboard') renderDashboard();
+  if(name==='weekly-plan') loadWeeklyPlans();
   window.scrollTo(0,0);
 }
 function openServiceReport(){
@@ -1408,6 +1587,417 @@ async function exportMyCSV(){
   a.click();
   URL.revokeObjectURL(url);
   showToast('✅ CSV downloaded!', 3000);
+}
+
+// ── Weekly Plan ──
+let wpCurrentWeekOffset = 0;
+let wpEditingKey = null;
+let wpPlans = []; // cached plans for current week
+
+function getWeekDates(offset){
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
+  const dates = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+function changeWeek(dir){
+  wpCurrentWeekOffset += dir;
+  loadWeeklyPlans();
+}
+
+async function loadWeeklyPlans(){
+  const dates = getWeekDates(wpCurrentWeekOffset);
+  const start = dates[0], end = dates[6];
+
+  // Update header labels
+  const fmt = d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  document.getElementById('wp-week-label').textContent = 'Week '+getWeekNum(dates[0]);
+  document.getElementById('wp-week-range').textContent = fmt(start)+' – '+fmt(end);
+
+  if(!db){ renderWpGrid([], dates); return; }
+
+  // Fetch all plans for this week from Firebase
+  const snaps = await Promise.all(dates.map(d=>db.ref('weekly_plans/'+d).once('value')));
+  wpPlans = [];
+  snaps.forEach((snap,i)=>{
+    snap.forEach(child=>{
+      wpPlans.push({...child.val(), key:child.key, date:dates[i]});
+    });
+  });
+
+  renderWpGrid(wpPlans, dates);
+  renderMyWpList(wpPlans);
+}
+
+function getWeekNum(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const start = new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-start)/86400000+start.getDay()+1)/7);
+}
+
+function renderWpGrid(plans, dates){
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const engineers = [...new Set(plans.map(p=>p.engineerName))].sort();
+  if(engName && !engineers.includes(engName)) engineers.unshift(engName);
+
+  const cols = 8; // name col + 7 days
+  let html = `<div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:2px;min-width:480px">`;
+
+  // Header row
+  html += `<div style="font-size:11px;font-weight:700;color:var(--muted);padding:4px 0">Engineer</div>`;
+  dates.forEach((d,i)=>{
+    const dt = new Date(d+'T00:00:00');
+    const isToday = d===new Date().toISOString().split('T')[0];
+    html += `<div style="text-align:center;font-size:10px;font-weight:700;color:${isToday?'var(--blue)':'var(--muted)'};padding:4px 0">
+      <div>${dayNames[i]}</div>
+      <div style="font-size:11px;color:${isToday?'var(--blue)':'var(--text)'}">${dt.getDate()}</div>
+    </div>`;
+  });
+
+  // Engineer rows
+  if(engineers.length===0){
+    html += `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);font-size:13px">No plans yet — tap Add Plan to start</div>`;
+  } else {
+    engineers.forEach(eng=>{
+      const ini = eng.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      html += `<div style="font-size:11px;font-weight:600;padding:4px 2px;display:flex;align-items:center;gap:4px;overflow:hidden">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--blue-lt);color:var(--blue);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ini}</div>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${eng.split(' ')[0]}</span>
+      </div>`;
+      dates.forEach(date=>{
+        const dayPlans = plans.filter(p=>p.engineerName===eng&&p.date===date);
+        if(dayPlans.length===0){
+          html += `<div class="wp-cell wp-cell-empty" onclick="openAddPlan('${date}','${eng}')">+</div>`;
+        } else {
+          html += `<div>`;
+          dayPlans.forEach(p=>{
+            const statusClass = p.status==='done'?'wp-cell-done':p.status==='in-progress'?'wp-cell-in-progress':'wp-cell-planned';
+            html += `<div class="wp-cell ${statusClass}" onclick="openEditPlan('${p.key}','${date}')">
+              <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.customer||''}</div>
+              <div style="opacity:.8">${p.jobType||''}</div>
+            </div>`;
+          });
+          html += `</div>`;
+        }
+      });
+    });
+  }
+
+  html += `</div>`;
+  document.getElementById('wp-grid').innerHTML = html;
+}
+
+function renderMyWpList(plans){
+  const el = document.getElementById('wp-my-list');
+  const mine = plans.filter(p=>p.engineerName===engName).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!mine.length){ el.innerHTML='<div class="empty">No plans for you this week</div>'; return; }
+  const statusIcon = s=>s==='done'?'🟢':s==='in-progress'?'🟡':'🔵';
+  const statusLabel = s=>s==='done'?'Done':s==='in-progress'?'In Progress':'Planned';
+  el.innerHTML = mine.map(p=>`
+    <div class="hist-row" onclick="openEditPlan('${p.key}','${p.date}')">
+      <div class="hist-body">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="hist-name">${formatDateShort(p.date)}</div>
+          <span style="font-size:12px">${statusIcon(p.status)} ${statusLabel(p.status)}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-top:2px">${p.customer}</div>
+        <div style="font-size:12px;color:var(--muted)">${p.jobType}${p.equipment?' · '+p.equipment:''}</div>
+        ${p.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${p.note}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openAddPlan(date='', engineer=''){
+  wpEditingKey = null;
+  document.getElementById('wp-modal-title').textContent = 'Add Plan';
+  document.getElementById('wp-eng').value = engineer || engName || '';
+  document.getElementById('wp-date').value = date || new Date().toISOString().split('T')[0];
+  document.getElementById('wp-customer').value = '';
+  document.getElementById('wp-jobtype').value = 'PM';
+  document.getElementById('wp-equipment').value = '';
+  document.getElementById('wp-note').value = '';
+  document.getElementById('wp-status').value = 'planned';
+  document.getElementById('wp-delete-btn').style.display = 'none';
+  document.getElementById('wp-modal').classList.remove('hidden');
+}
+
+function openEditPlan(key, date){
+  const plan = wpPlans.find(p=>p.key===key&&p.date===date);
+  if(!plan) return;
+  wpEditingKey = {key, date};
+  document.getElementById('wp-modal-title').textContent = 'Edit Plan';
+  document.getElementById('wp-eng').value = plan.engineerName||'';
+  document.getElementById('wp-date').value = plan.date||'';
+  document.getElementById('wp-customer').value = plan.customer||'';
+  document.getElementById('wp-jobtype').value = plan.jobType||'PM';
+  document.getElementById('wp-equipment').value = plan.equipment||'';
+  document.getElementById('wp-note').value = plan.note||'';
+  document.getElementById('wp-status').value = plan.status||'planned';
+  document.getElementById('wp-delete-btn').style.display = 'block';
+  document.getElementById('wp-modal').classList.remove('hidden');
+}
+
+async function savePlan(){
+  const eng = document.getElementById('wp-eng').value.trim();
+  const date = document.getElementById('wp-date').value;
+  const customer = document.getElementById('wp-customer').value.trim();
+  const jobType = document.getElementById('wp-jobtype').value;
+  if(!eng||!date||!customer){ showToast('Please fill Engineer, Date and Customer'); return; }
+
+  const plan = {
+    engineerName: eng,
+    date,
+    customer,
+    jobType,
+    equipment: document.getElementById('wp-equipment').value.trim(),
+    note: document.getElementById('wp-note').value.trim(),
+    status: document.getElementById('wp-status').value,
+    updatedAt: Date.now(),
+    createdBy: engName||'unknown'
+  };
+
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  if(wpEditingKey){
+    await db.ref('weekly_plans/'+wpEditingKey.date+'/'+wpEditingKey.key).update(plan);
+    showToast('✅ Plan updated');
+  } else {
+    await db.ref('weekly_plans/'+date).push(plan);
+    showToast('✅ Plan saved');
+  }
+  closeWpModal();
+  loadWeeklyPlans();
+}
+
+async function deletePlan(){
+  if(!wpEditingKey) return;
+  if(!confirm('Delete this plan?')) return;
+  await db.ref('weekly_plans/'+wpEditingKey.date+'/'+wpEditingKey.key).remove();
+  showToast('Plan deleted');
+  closeWpModal();
+  loadWeeklyPlans();
+}
+
+function closeWpModal(e){
+  if(!e||e.target===document.getElementById('wp-modal'))
+    document.getElementById('wp-modal').classList.add('hidden');
+}
+
+// ── Job List ──
+let allJobs = [];
+let jobFilter = 'all';
+let editingJobKey = null;
+let currentWpTab = 'plan';
+
+function switchWpTab(tab){
+  currentWpTab = tab;
+  const planTab = document.getElementById('wp-plan-tab');
+  const jobsTab = document.getElementById('wp-jobs-tab');
+  const planBtn = document.getElementById('wp-tab-plan');
+  const jobsBtn = document.getElementById('wp-tab-jobs');
+  const weekNav = document.getElementById('wp-week-nav');
+  const weekLabel = document.getElementById('wp-week-label');
+  const screenTitle = document.getElementById('wp-screen-title');
+
+  if(tab==='plan'){
+    planTab.style.display='block';
+    jobsTab.style.display='none';
+    planBtn.style.background='#fff';
+    planBtn.style.color='var(--amber)';
+    jobsBtn.style.background='rgba(255,255,255,.25)';
+    jobsBtn.style.color='#fff';
+    weekNav.style.display='flex';
+    weekLabel.style.display='block';
+    screenTitle.textContent='📅 Weekly Plan';
+  } else {
+    planTab.style.display='none';
+    jobsTab.style.display='block';
+    planBtn.style.background='rgba(255,255,255,.25)';
+    planBtn.style.color='#fff';
+    jobsBtn.style.background='#fff';
+    jobsBtn.style.color='var(--blue)';
+    weekNav.style.display='none';
+    weekLabel.style.display='none';
+    screenTitle.textContent='📋 Service Job List';
+    loadJobs();
+  }
+}
+
+async function loadJobs(){
+  if(!db){ renderJobs([]); return; }
+  const snap = await db.ref('service_jobs').orderByChild('createdAt').once('value');
+  allJobs = [];
+  snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
+  allJobs.reverse(); // newest first
+  renderJobs(allJobs);
+}
+
+function filterJobs(filter){
+  jobFilter = filter;
+  // Update filter button styles
+  ['all','pending','in-progress','done'].forEach(f=>{
+    const btn = document.getElementById('jf-'+f);
+    if(btn){
+      btn.style.background = f===filter ? 'var(--blue)' : 'var(--white)';
+      btn.style.color = f===filter ? '#fff' : 'var(--text)';
+      btn.style.border = f===filter ? 'none' : '1px solid var(--border)';
+    }
+  });
+  renderJobs(allJobs);
+}
+
+function renderJobs(jobs){
+  const el = document.getElementById('job-list-container');
+  const filtered = jobFilter==='all' ? jobs : jobs.filter(j=>j.status===jobFilter);
+
+  if(!filtered.length){
+    el.innerHTML = `<div class="empty">No ${jobFilter==='all'?'':''+jobFilter+' '}jobs yet</div>`;
+    return;
+  }
+
+  const statusIcon = s=>s==='done'?'🟢':s==='in-progress'?'🟡':'🔴';
+  const statusLabel = s=>s==='done'?'Done':s==='in-progress'?'In Progress':'Pending';
+  const statusColor = s=>s==='done'?'var(--green)':s==='in-progress'?'var(--amber)':'var(--red)';
+
+  el.innerHTML = filtered.map(j=>{
+    const isAssignedToMe = j.assignee===engName;
+    const isOpen = !j.assignee;
+    const dueDate = j.dueDate ? new Date(j.dueDate+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+    const overdue = j.dueDate && j.status!=='done' && j.dueDate < new Date().toISOString().split('T')[0];
+
+    return `<div class="card" style="margin-bottom:10px;padding:14px;${j.status==='done'?'opacity:.6':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${j.title}</div>
+          ${j.customer?`<div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${j.customer}</div>`:''}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <span style="font-size:11px;font-weight:700;color:${statusColor(j.status)}">${statusIcon(j.status)} ${statusLabel(j.status)}</span>
+            ${j.jobType?`<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 6px;border-radius:10px">${j.jobType}</span>`:''}
+            ${dueDate?`<span style="font-size:11px;background:${overdue?'var(--red-lt)':'var(--surface)'};color:${overdue?'var(--red)':'var(--muted)'};padding:2px 6px;border-radius:10px">${overdue?'⚠️ ':''}Due ${dueDate}</span>`:''}
+          </div>
+          ${j.assignee?
+            `<div style="font-size:12px;color:var(--blue);margin-top:6px;font-weight:600">👤 Assigned: ${j.assignee}</div>`:
+            `<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600">🟢 Open — anyone can take this</div>`
+          }
+          ${j.desc?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${j.desc}</div>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Created by ${j.createdBy||'unknown'}</div>
+        </div>
+        <button onclick="openEditJob('${j.key}')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:12px;cursor:pointer;flex-shrink:0">Edit</button>
+      </div>
+      ${j.status!=='done'?`
+      <div style="display:flex;gap:8px;margin-top:12px">
+        ${j.status==='pending'?`<button onclick="updateJobStatus('${j.key}','in-progress')" style="flex:1;padding:8px;background:var(--amber-lt);color:var(--amber);border:1px solid var(--amber);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">🟡 Start Job</button>`:''}
+        ${j.status==='pending'&&isOpen?`<button onclick="assignJobToMe('${j.key}')" style="flex:1;padding:8px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">👋 Take Job</button>`:''}
+        <button onclick="updateJobStatus('${j.key}','done')" style="flex:1;padding:8px;background:var(--green-lt);color:var(--green);border:1px solid var(--green);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">✅ Mark Done</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function updateJobStatus(key, status){
+  if(!db) return;
+  await db.ref('service_jobs/'+key).update({
+    status,
+    updatedAt: Date.now(),
+    updatedBy: engName||'unknown'
+  });
+  showToast(status==='done'?'✅ Job marked as done!':'🟡 Job started!');
+  loadJobs();
+}
+
+async function assignJobToMe(key){
+  if(!engName){ showToast('Set your name first'); return; }
+  if(!db) return;
+  await db.ref('service_jobs/'+key).update({
+    assignee: engName,
+    status: 'in-progress',
+    updatedAt: Date.now(),
+    updatedBy: engName
+  });
+  showToast('👋 Job assigned to you & started!');
+  loadJobs();
+}
+
+function openAddJob(){
+  editingJobKey = null;
+  document.getElementById('job-modal-title').textContent = 'Add Job';
+  document.getElementById('job-title').value = '';
+  document.getElementById('job-customer').value = '';
+  document.getElementById('job-type').value = 'PM';
+  document.getElementById('job-assignee').value = '';
+  document.getElementById('job-due').value = '';
+  document.getElementById('job-desc').value = '';
+  document.getElementById('job-status').value = 'pending';
+  document.getElementById('job-delete-btn').style.display = 'none';
+  document.getElementById('job-modal').classList.remove('hidden');
+}
+
+function openEditJob(key){
+  const job = allJobs.find(j=>j.key===key);
+  if(!job) return;
+  editingJobKey = key;
+  document.getElementById('job-modal-title').textContent = 'Edit Job';
+  document.getElementById('job-title').value = job.title||'';
+  document.getElementById('job-customer').value = job.customer||'';
+  document.getElementById('job-type').value = job.jobType||'PM';
+  document.getElementById('job-assignee').value = job.assignee||'';
+  document.getElementById('job-due').value = job.dueDate||'';
+  document.getElementById('job-desc').value = job.desc||'';
+  document.getElementById('job-status').value = job.status||'pending';
+  document.getElementById('job-delete-btn').style.display = 'block';
+  document.getElementById('job-modal').classList.remove('hidden');
+}
+
+async function saveJob(){
+  const title = document.getElementById('job-title').value.trim();
+  if(!title){ showToast('Please enter a job title'); return; }
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  const job = {
+    title,
+    customer: document.getElementById('job-customer').value.trim(),
+    jobType: document.getElementById('job-type').value,
+    assignee: document.getElementById('job-assignee').value.trim(),
+    dueDate: document.getElementById('job-due').value,
+    desc: document.getElementById('job-desc').value.trim(),
+    status: document.getElementById('job-status').value,
+    updatedAt: Date.now(),
+    updatedBy: engName||'unknown'
+  };
+
+  if(editingJobKey){
+    await db.ref('service_jobs/'+editingJobKey).update(job);
+    showToast('✅ Job updated');
+  } else {
+    job.createdAt = Date.now();
+    job.createdBy = engName||'unknown';
+    await db.ref('service_jobs').push(job);
+    showToast('✅ Job added');
+  }
+  closeJobModal();
+  loadJobs();
+}
+
+async function deleteJob(){
+  if(!editingJobKey) return;
+  if(!confirm('Delete this job?')) return;
+  await db.ref('service_jobs/'+editingJobKey).remove();
+  showToast('Job deleted');
+  closeJobModal();
+  loadJobs();
+}
+
+function closeJobModal(e){
+  if(!e||e.target===document.getElementById('job-modal'))
+    document.getElementById('job-modal').classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', init);
