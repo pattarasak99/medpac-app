@@ -1,1 +1,2006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MEDPAC">
+<title>MEDPAC Field Service</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAgapBSJGc3dTbznE4PBhiNA01gTFdTx4A",
+  authDomain: "medpac-service-th.firebaseapp.com",
+  databaseURL: "https://medpac-service-th-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "medpac-service-th",
+  storageBucket: "medpac-service-th.firebasestorage.app",
+  messagingSenderId: "757062942445",
+  appId: "1:757062942445:web:ae831bcbc14fa466fd16e4"
+};
+const SERVICE_REPORT_URL = 'https://pattarasak99.github.io/medpac-service-report/';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwHI76KJVg472MihV2lhtX3UGSP4s9wc0jIu_U_s6ciF4Vu_W-2DAnKUdl-z9vPnjQo9A/exec';
+const WORKER_URL = 'https://medpacservicereport.j-pattarasak.workers.dev';
+const DRIVE_FOLDER = '1plqZuATHNtUc6ibN6HYL43ahMIfC-Zph';
 
+try{ firebase.initializeApp(FIREBASE_CONFIG); } catch(e){}
+let db = null;
+try{ db = firebase.database(); } catch(e){}
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --blue:#185FA5;--blue-dk:#0C447C;--blue-lt:#E8F2FC;
+  --green:#1A9E6A;--green-lt:#E6F7F1;
+  --amber:#D97706;--amber-lt:#FEF3C7;
+  --red:#DC2626;--red-lt:#FEE2E2;
+  --gray:#6B7280;--border:#E5E7EB;
+  --bg:#F3F4F6;--white:#FFFFFF;--text:#111827;
+  --muted:#9CA3AF;--surface:#F9FAFB;
+  --r:12px;--rs:8px;
+  --sh:0 1px 3px rgba(0,0,0,.08);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+
+/* Top bar */
+.top-bar{position:sticky;top:0;z-index:100;background:var(--blue);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.top-bar h1{color:#fff;font-size:15px;font-weight:700}
+.top-bar p{color:rgba(255,255,255,.7);font-size:11px;margin-top:1px}
+.eng-pill{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:5px 12px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+
+/* Screens */
+.screen{display:none;min-height:calc(100vh - 56px);padding-bottom:80px}
+.screen.active{display:block}
+
+/* Bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:var(--white);border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px;gap:3px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500}
+.nav-btn.active{color:var(--blue)}
+.nav-btn svg{width:22px;height:22px}
+
+/* Cards & layout */
+.page-body{padding:14px;max-width:480px;margin:0 auto}
+.card{background:var(--white);border-radius:var(--r);border:1px solid var(--border);padding:16px;margin-bottom:12px;box-shadow:var(--sh)}
+.sec-hd{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.sec-link{font-size:12px;color:var(--blue);font-weight:500;cursor:pointer;border:none;background:none}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--green-lt);color:var(--green)}
+.badge-amber{background:var(--amber-lt);color:var(--amber)}
+.badge-red{background:var(--red-lt);color:var(--red)}
+.badge-blue{background:var(--blue-lt);color:var(--blue)}
+.badge-gray{background:var(--surface);color:var(--gray);border:1px solid var(--border)}
+
+/* Home */
+.greeting-box{padding:20px 16px 12px;max-width:480px;margin:0 auto}
+.greeting-box h2{font-size:22px;font-weight:700}
+.greeting-box p{font-size:13px;color:var(--gray);margin-top:3px}
+
+.name-input-box{padding:0 16px 16px;max-width:480px;margin:0 auto}
+.name-input-row{display:flex;gap:8px}
+.name-input-row input{flex:1;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--white);color:var(--text)}
+.name-input-row input:focus{outline:none;border-color:var(--blue)}
+.name-input-row button{padding:11px 22px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;white-space:nowrap;transition:transform .15s}
+.name-input-row button:active{transform:scale(.95)}
+
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px;max-width:480px;margin:0 auto}
+.action-card{background:var(--white);border-radius:var(--r);padding:16px 14px;cursor:pointer;border:1px solid var(--border);box-shadow:var(--sh);transition:transform .12s}
+.action-card:active{transform:scale(.96)}
+.action-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.action-icon svg{width:20px;height:20px}
+.action-label{font-size:13px;font-weight:700;color:var(--text)}
+.action-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.action-status{font-size:11px;font-weight:600;margin-top:6px}
+
+/* Check-in hero */
+.ci-hero{background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dk) 100%);padding:28px 16px 24px;text-align:center}
+.ci-hero-name{color:rgba(255,255,255,.8);font-size:13px;margin-bottom:4px}
+.ci-clock{font-size:52px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1}
+.ci-date{color:rgba(255,255,255,.75);font-size:13px;margin-top:6px}
+.ci-loc{color:rgba(255,255,255,.6);font-size:11px;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:4px}
+
+/* Check-in buttons */
+.ci-btn{width:100%;padding:16px;border:none;border-radius:var(--rs);font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.ci-btn-in{background:var(--green);color:#fff}
+.ci-btn-out{background:var(--red);color:#fff}
+.ci-btn:disabled{opacity:.4;cursor:not-allowed}
+.ci-btn-in:not(:disabled):active{background:#158a5a}
+.ci-btn-out:not(:disabled):active{background:#b91c1c}
+
+/* Photo stamp preview */
+.stamp-preview{border-radius:var(--rs);overflow:hidden;position:relative;background:#000;margin-bottom:12px}
+.stamp-preview img{width:100%;display:block;opacity:.9}
+.stamp-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:12px 10px 10px}
+.stamp-overlay .stamp-time{color:#fff;font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.stamp-overlay .stamp-date{color:rgba(255,255,255,.85);font-size:12px;margin-top:2px}
+.stamp-overlay .stamp-loc{color:rgba(255,255,255,.7);font-size:11px;margin-top:3px;display:flex;align-items:center;gap:3px}
+.stamp-overlay .stamp-name{color:#fff;font-size:12px;font-weight:700;margin-top:2px}
+.stamp-overlay .stamp-type{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-top:4px}
+.stamp-type-in{background:var(--green);color:#fff}
+.stamp-type-out{background:var(--red);color:#fff}
+
+/* History */
+.hist-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.hist-row:last-child{border-bottom:none}
+.hist-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.hist-dot-in{background:var(--green)}
+.hist-dot-out{background:var(--red)}
+.hist-dot-gray{background:var(--muted)}
+.hist-body{flex:1}
+.hist-name{font-size:14px;font-weight:600}
+.hist-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.hist-right{text-align:right;flex-shrink:0}
+.hist-time-in{font-size:13px;font-weight:700;color:var(--green)}
+.hist-time-out{font-size:13px;font-weight:700;color:var(--red)}
+
+/* Dashboard */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:var(--white);border-radius:var(--r);padding:16px;border:1px solid var(--border);box-shadow:var(--sh)}
+.stat-num{font-size:32px;font-weight:800;color:var(--blue);line-height:1}
+.stat-label{font-size:12px;color:var(--muted);margin-top:4px}
+
+.eng-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.eng-row:last-child{border-bottom:none}
+.eng-avatar-sm{width:36px;height:36px;border-radius:50%;background:var(--blue-lt);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--blue);flex-shrink:0}
+.eng-info{flex:1;min-width:0}
+.eng-nm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eng-st{font-size:12px;color:var(--muted);margin-top:1px}
+
+/* Camera modal */
+.cam-modal{position:fixed;inset:0;z-index:300;background:#000;display:flex;flex-direction:column}
+.cam-modal.hidden{display:none}
+.cam-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:rgba(0,0,0,.6)}
+.cam-top h3{color:#fff;font-size:16px;font-weight:600}
+.cam-close{background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:0 4px}
+#cam-video{width:100%;flex:1;object-fit:cover;display:block}
+.cam-bottom{padding:20px 16px;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;gap:24px}
+.cam-snap{width:68px;height:68px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;transition:transform .1s}
+.cam-snap:active{transform:scale(.92)}
+.cam-cancel-btn{color:#fff;font-size:14px;background:none;border:none;cursor:pointer;padding:8px}
+#cam-canvas{display:none}
+
+/* Upload progress */
+.upload-bar{background:var(--blue-lt);border-radius:20px;height:6px;overflow:hidden;margin-top:8px}
+.upload-bar-fill{height:100%;background:var(--blue);border-radius:20px;transition:width .3s}
+
+/* Toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;z-index:999;transition:opacity .25s;white-space:nowrap;max-width:calc(100vw - 48px);text-align:center}
+#toast.show{opacity:1}
+
+.empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px}
+.divh{height:10px}
+
+/* Modal overlay */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.modal-overlay.hidden{display:none}
+.modal-sheet{background:var(--white);border-radius:20px 20px 0 0;padding:20px 16px;width:100%;max-width:480px;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+
+/* Weekly plan grid */
+.wp-grid-header{display:grid;font-size:11px;font-weight:700;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:6px}
+.wp-cell{padding:3px 2px;min-height:32px;border-radius:6px;margin:2px;font-size:10px;cursor:pointer;text-align:center;line-height:1.3}
+.wp-cell-planned{background:#DBEAFE;color:#1D4ED8}
+.wp-cell-in-progress{background:#FEF3C7;color:#B45309}
+.wp-cell-done{background:#D1FAE5;color:#065F46}
+.wp-cell-empty{background:var(--surface);color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="top-bar">
+  <div>
+    <h1>🔧 MEDPAC Field Service</h1>
+    <p id="top-date"></p>
+  </div>
+  <div class="eng-pill" id="eng-pill" onclick="focusNameInput()">👤 <span id="eng-pill-name">Set name</span></div>
+</div>
+
+<!-- HOME -->
+<div id="home-screen" class="screen active">
+  <div class="greeting-box">
+    <h2 id="home-greeting">Good morning! 👋</h2>
+    <p id="home-sub">Enter your name to get started</p>
+  </div>
+
+  <div class="name-input-box">
+    <div class="name-input-row">
+      <input type="text" id="eng-name-input" placeholder="Your name (e.g. Pattarasak J.)" maxlength="40" autocomplete="name" enterkeyhint="done" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmName();document.getElementById('eng-name-input').blur();}" oninput="onNameInputChange()">
+      <button onclick="confirmName()">Set</button>
+    </div>
+  </div>
+
+  <div id="quick-actions-label" style="padding:0 16px 8px;max-width:480px;margin:0 auto;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Quick Actions</div>
+  <div class="action-grid">
+    <div class="action-card" onclick="goCheckin('in')">
+      <div class="action-icon" style="background:var(--green-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#1A9E6A" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="action-label">Check In</div>
+      <div class="action-status" id="home-ci-status" style="color:var(--muted)">Not checked in</div>
+    </div>
+    <div class="action-card" onclick="goCheckin('out')">
+      <div class="action-icon" style="background:var(--red-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+      <div class="action-label">Check Out</div>
+      <div class="action-status" id="home-co-status" style="color:var(--muted)">—</div>
+    </div>
+    <div class="action-card" onclick="openServiceReport()">
+      <div class="action-icon" style="background:var(--blue-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+      <div class="action-label">Service Report</div>
+      <div class="action-sub">Create & save PDF</div>
+    </div>
+    <div class="action-card" onclick="switchScreen('weekly-plan')">
+      <div class="action-icon" style="background:var(--amber-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/></svg></div>
+      <div class="action-label">Weekly Plan</div>
+      <div class="action-sub">Team schedule</div>
+    </div>
+  </div>
+
+  <div class="page-body" style="padding-top:12px">
+    <div class="card">
+      <div class="sec-hd">Today's Activity <button class="sec-link" onclick="switchScreen('dashboard')">See all →</button></div>
+      <div id="home-today-list"><div class="empty">No check-ins yet today</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK-IN -->
+<div id="checkin-screen" class="screen">
+  <div class="ci-hero">
+    <div class="ci-hero-name" id="ci-hero-name">—</div>
+    <div class="ci-clock" id="ci-clock">00:00:00</div>
+    <div class="ci-date" id="ci-date">—</div>
+    <div class="ci-loc" id="ci-loc">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>Locating...</span>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <!-- Status -->
+    <div class="card" id="ci-status-card">
+      <div style="text-align:center;padding:4px 0 12px">
+        <div id="ci-status-badge"></div>
+        <div id="ci-status-text" style="font-size:13px;color:var(--muted);margin-top:6px"></div>
+      </div>
+      <button class="ci-btn ci-btn-in" id="ci-btn-in" onclick="startCamera('in')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Check In — Take Photo
+      </button>
+      <div style="height:10px"></div>
+      <button class="ci-btn ci-btn-out" id="ci-btn-out" onclick="startCamera('out')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Check Out — Take Photo
+      </button>
+      <div id="upload-status" style="display:none;margin-top:10px;text-align:center;font-size:13px;color:var(--blue)"></div>
+    </div>
+
+    <!-- Last stamped photo -->
+    <div id="last-photo-wrap" style="display:none">
+      <div class="card">
+        <div class="sec-hd">Last Check-in Photo</div>
+        <div class="stamp-preview">
+          <img id="last-photo-img" src="" alt="Check-in photo">
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+      <div class="sec-hd">My Records — Last 7 Days
+        <button onclick="exportMyCSV()" style="padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer">⬇ Export CSV</button>
+      </div>
+      <div id="ci-history"><div class="empty">No records yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard-screen" class="screen">
+  <div class="page-body">
+    <div style="padding:4px 0 12px">
+      <div style="font-size:18px;font-weight:800">📊 Team Dashboard</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px" id="dash-date-label"></div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-in">0</div>
+        <div class="stat-label">Active (In)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-done">0</div>
+        <div class="stat-label">Done Today</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec-hd">Engineer Status</div>
+      <div id="dash-eng-list"><div class="empty">No records yet</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-hd">Timeline</div>
+      <div id="dash-timeline"><div class="empty">No activity yet</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- REPORTS -->
+<div id="reports-screen" class="screen">
+  <div class="page-body">
+    <div style="padding:4px 0 16px">
+      <div style="font-size:18px;font-weight:800">📥 Monthly Report</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:2px">Export check-in/out data to CSV</div>
+    </div>
+
+    <div class="card">
+      <div class="sec-hd">Select Month</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="report-month" style="flex:1;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--white);color:var(--text)">
+        </select>
+        <select id="report-year" style="width:110px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;background:var(--white);color:var(--text)">
+        </select>
+      </div>
+      <div style="height:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="viewMonthlyHistory()" style="flex:1;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          View History
+        </button>
+        <button onclick="generateReport()" style="flex:1;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="monthly-history-card" style="display:none">
+      <div class="sec-hd">Daily History <span id="mh-month-label" style="font-weight:400;color:var(--muted);font-size:12px"></span></div>
+      <div id="monthly-history-list"></div>
+    </div>
+
+    <div class="card" id="report-preview-card" style="display:none">
+      <div class="sec-hd">Preview</div>
+      <div id="report-preview" style="overflow-x:auto;font-size:12px"></div>
+    </div>
+
+    <div id="report-status" style="text-align:center;padding:20px;color:var(--muted);font-size:13px"></div>
+  </div>
+</div>
+
+<!-- WEEKLY PLAN -->
+<div id="weekly-plan-screen" class="screen">
+  <div style="background:linear-gradient(135deg,var(--amber) 0%,#B45309 100%);padding:16px;text-align:center">
+    <div style="font-size:17px;font-weight:700;color:#fff" id="wp-screen-title">📅 Weekly Plan</div>
+    <div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:4px" id="wp-week-label"></div>
+    <div id="wp-week-nav" style="display:flex;justify-content:center;align-items:center;gap:16px;margin-top:10px">
+      <button onclick="changeWeek(-1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%">‹</button>
+      <span style="color:#fff;font-size:13px;font-weight:600" id="wp-week-range"></span>
+      <button onclick="changeWeek(1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:18px;cursor:pointer;width:32px;height:32px;border-radius:50%">›</button>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+      <button id="wp-tab-plan" onclick="switchWpTab('plan')" style="padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--amber)">📅 Weekly Plan</button>
+      <button id="wp-tab-jobs" onclick="switchWpTab('jobs')" style="padding:6px 20px;border-radius:20px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:rgba(255,255,255,.25);color:#fff">📋 Job List</button>
+    </div>
+  </div>
+
+  <!-- Weekly Plan Tab -->
+  <div id="wp-plan-tab" class="page-body">
+    <button onclick="openAddPlan()" style="width:100%;padding:12px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Plan
+    </button>
+    <div class="card" style="padding:10px;overflow-x:auto">
+      <div id="wp-grid"></div>
+    </div>
+    <div class="card">
+      <div class="sec-hd">My Plans This Week</div>
+      <div id="wp-my-list"><div class="empty">No plans yet</div></div>
+    </div>
+  </div>
+
+  <!-- Job List Tab -->
+  <div id="wp-jobs-tab" class="page-body" style="display:none">
+    <!-- Filter tabs -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px">
+      <button id="jf-all" onclick="filterJobs('all')" style="padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;white-space:nowrap">All</button>
+      <button id="jf-pending" onclick="filterJobs('pending')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🔴 Pending</button>
+      <button id="jf-in-progress" onclick="filterJobs('in-progress')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟡 In Progress</button>
+      <button id="jf-done" onclick="filterJobs('done')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟢 Done</button>
+    </div>
+
+    <button onclick="openAddJob()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Job
+    </button>
+
+    <div id="job-list-container"></div>
+  </div>
+</div>
+
+<!-- Add/Edit Plan Modal -->
+<div class="modal-overlay hidden" id="wp-modal" onclick="closeWpModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px" id="wp-modal-title">Add Plan</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Engineer *</label>
+        <input type="text" id="wp-eng" placeholder="Engineer name" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Date *</label>
+        <input type="date" id="wp-date" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Customer *</label>
+        <input type="text" id="wp-customer" placeholder="Customer name" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Type *</label>
+        <select id="wp-jobtype" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="PM">PM (Preventive Maintenance)</option>
+          <option value="Repair">Repair</option>
+          <option value="Installation">Installation</option>
+          <option value="Training">Training</option>
+          <option value="Inspection">Inspection</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Equipment / Machine</label>
+        <input type="text" id="wp-equipment" placeholder="Equipment name (optional)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Note</label>
+        <textarea id="wp-note" placeholder="Additional notes..." rows="2" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;resize:none"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Status</label>
+        <select id="wp-status" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="planned">🔵 Planned</option>
+          <option value="in-progress">🟡 In Progress</option>
+          <option value="done">🟢 Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button onclick="savePlan()" style="width:100%;padding:14px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Save Plan</button>
+    <div style="height:8px"></div>
+    <button id="wp-delete-btn" onclick="deletePlan()" style="display:none;width:100%;padding:14px;background:var(--red-lt);color:var(--red);border:1px solid var(--red);border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Delete Plan</button>
+    <div style="height:8px"></div>
+    <button onclick="closeWpModal()" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- Add/Edit Job Modal -->
+<div class="modal-overlay hidden" id="job-modal" onclick="closeJobModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px" id="job-modal-title">Add Job</div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Title *</label>
+        <input type="text" id="job-title" placeholder="e.g. Replace filter at BLC" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Customer / Location</label>
+        <input type="text" id="job-customer" placeholder="Customer name or location" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Job Type</label>
+        <select id="job-type" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="PM">PM (Preventive Maintenance)</option>
+          <option value="Repair">Repair</option>
+          <option value="Installation">Installation</option>
+          <option value="Training">Training</option>
+          <option value="Inspection">Inspection</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Assign To (optional)</label>
+        <input type="text" id="job-assignee" placeholder="Leave blank = open for anyone" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Due Date (optional)</label>
+        <input type="date" id="job-due" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Description</label>
+        <textarea id="job-desc" placeholder="Details about the job..." rows="3" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;resize:none"></textarea>
+      </div>
+      <div id="job-status-row">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase">Status</label>
+        <select id="job-status" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:15px;margin-top:4px;box-sizing:border-box;background:var(--white)">
+          <option value="pending">🔴 Pending</option>
+          <option value="in-progress">🟡 In Progress</option>
+          <option value="done">🟢 Done</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="height:16px"></div>
+    <button onclick="saveJob()" style="width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Save Job</button>
+    <div style="height:8px"></div>
+    <button id="job-delete-btn" onclick="deleteJob()" style="display:none;width:100%;padding:14px;background:var(--red-lt);color:var(--red);border:1px solid var(--red);border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Delete Job</button>
+    <div style="height:8px"></div>
+    <button onclick="closeJobModal()" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<div class="bottom-nav">
+  <button class="nav-btn active" id="nav-home" onclick="switchScreen('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="nav-btn" id="nav-checkin" onclick="switchScreen('checkin')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Check In/Out
+  </button>
+  <button class="nav-btn" id="nav-dashboard" onclick="switchScreen('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-btn" id="nav-reports" onclick="switchScreen('reports')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Reports
+  </button>
+</div>
+
+<!-- Camera Modal -->
+<div class="cam-modal hidden" id="cam-modal">
+  <div class="cam-top">
+    <h3 id="cam-title">Check In Photo</h3>
+    <button class="cam-close" onclick="closeCamera()">✕</button>
+  </div>
+  <video id="cam-video" autoplay playsinline muted></video>
+  <canvas id="cam-canvas"></canvas>
+  <div class="cam-bottom">
+    <button class="cam-cancel-btn" onclick="closeCamera()">Cancel</button>
+    <button class="cam-snap" onclick="handleSnap()" title="Take Photo">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4" fill="#185FA5"/></svg>
+    </button>
+    <button class="cam-cancel-btn" onclick="flipCamera()">🔄 Flip</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ──
+let engName = '';
+let todayKey = '';
+let gpsLat = null, gpsLon = null, gpsAddr = '';
+let todayRecords = []; // {name, type, time, lat, lon, addr, photoUrl, key}
+let cameraStream = null;
+let currentCamType = 'in'; // 'in' or 'out'
+let useFrontCam = false;
+let clockTick = null;
+
+// ── Init ──
+function init(){
+  const now = new Date();
+  todayKey = now.toISOString().split('T')[0];
+
+  document.getElementById('top-date').textContent =
+    now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('dash-date-label').textContent =
+    now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  const h = now.getHours();
+  document.getElementById('home-greeting').textContent =
+    h<12?'Good morning! 👋':h<17?'Good afternoon! ☀️':'Good evening! 🌙';
+
+  // Restore name
+  const saved = localStorage.getItem('medpac_eng_name');
+  if(saved){ setName(saved); }
+
+  // GPS
+  getGPS();
+
+  // Clock
+  startClock();
+
+  // Load from local cache first (instant)
+  loadLocalCache();
+  // Then sync with Firebase (authoritative)
+  loadToday();
+  // Init report selectors
+  initReportSelectors();
+}
+
+// ── Name ──
+function focusNameInput(){ switchScreen('home'); setTimeout(()=>document.getElementById('eng-name-input').focus(),200); }
+function confirmName(){
+  const v = document.getElementById('eng-name-input').value.trim();
+  if(!v){ showToast('Please enter your name'); return; }
+  setName(v);
+  showToast('✅ Name set: ' + v);
+  document.getElementById('eng-name-input').blur();
+}
+function onNameInputChange(){
+  const v = document.getElementById('eng-name-input').value.trim();
+  const label = document.getElementById('quick-actions-label');
+  if(v && !engName){
+    label.innerHTML = 'Quick Actions <span style="color:var(--blue);font-weight:700">— tap any action to confirm name</span>';
+  } else {
+    label.textContent = 'Quick Actions';
+  }
+}
+function setName(name){
+  engName = name;
+  localStorage.setItem('medpac_eng_name', name);
+  document.getElementById('eng-name-input').value = name;
+  document.getElementById('eng-pill-name').textContent = name.split(' ')[0];
+  document.getElementById('home-sub').textContent = 'Welcome, ' + name;
+  document.getElementById('ci-hero-name').textContent = name;
+
+  // Immediately check Firebase for today's records for this name
+  if(db){
+    db.ref('checkins/'+todayKey).orderByChild('name').equalTo(name).once('value').then(snap=>{
+      const existingRecs = [];
+      snap.forEach(child=>existingRecs.push({...child.val(), key:child.key}));
+      if(existingRecs.length > 0){
+        // Merge with todayRecords — add any missing records
+        existingRecs.forEach(r=>{
+          if(!todayRecords.find(tr=>tr.key===r.key)){
+            todayRecords.push(r);
+          }
+        });
+        persistTodayLocally();
+        renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+        const ins = existingRecs.filter(r=>r.type==='in');
+        const outs = existingRecs.filter(r=>r.type==='out');
+        if(ins.length>0){
+          const lastRec = existingRecs.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)).slice(-1)[0];
+          showToast(lastRec.type==='in' ? 
+            `⚠️ You already checked in today at ${ins[0].time}` : 
+            `✅ You checked in & out today`
+          , 4000);
+        }
+      } else {
+        updateHomeStatus();
+        loadMyHistory();
+      }
+    }).catch(()=>{ updateHomeStatus(); loadMyHistory(); });
+  } else {
+    updateHomeStatus();
+    loadMyHistory();
+  }
+}
+
+// ── GPS ──
+function getGPS(){
+  if(!navigator.geolocation){ gpsAddr='Location unavailable'; updateLocDisplay(); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    gpsLat = pos.coords.latitude.toFixed(5);
+    gpsLon = pos.coords.longitude.toFixed(5);
+    gpsAddr = gpsLat + ', ' + gpsLon;
+    // Reverse geocode with free API
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${gpsLat}&lon=${gpsLon}&format=json`)
+      .then(r=>r.json()).then(d=>{
+        const a = d.address;
+        gpsAddr = [a.road||a.suburb, a.city||a.town||a.village||a.county, a.state].filter(Boolean).join(', ');
+        updateLocDisplay();
+      }).catch(()=>{ gpsAddr=gpsLat+', '+gpsLon; updateLocDisplay(); });
+  }, err=>{
+    gpsAddr = 'Location unavailable';
+    updateLocDisplay();
+  },{timeout:8000, enableHighAccuracy:true});
+}
+function updateLocDisplay(){
+  document.getElementById('ci-loc').innerHTML =
+    `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg> ${gpsAddr}`;
+}
+
+// ── Clock ──
+function startClock(){
+  function tick(){
+    const now = new Date();
+    document.getElementById('ci-clock').textContent = now.toLocaleTimeString('en-GB');
+    document.getElementById('ci-date').textContent =
+      now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+  tick();
+  clockTick = setInterval(tick,1000);
+}
+
+// ── Firebase / local data ──
+function loadToday(){
+  if(!db){
+    renderTodayList(); renderDashboard(); updateHomeStatus(); return;
+  }
+  db.ref('checkins/'+todayKey).on('value', snap=>{
+    const fbRecords = [];
+    snap.forEach(child=>fbRecords.push({...child.val(), key:child.key}));
+    // Keep local records not yet in Firebase
+    const localRecords = todayRecords.filter(r=>r.key && r.key.startsWith('local_'));
+    todayRecords = [...fbRecords, ...localRecords];
+    persistTodayLocally();
+    renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+  });
+}
+function loadMyHistory(){
+  if(!engName || !db){ renderMyHistory([]); return; }
+  const dates=[];
+  for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()-i);dates.push(d.toISOString().split('T')[0]);}
+  Promise.all(dates.map(date=>db.ref('checkins/'+date).orderByChild('name').equalTo(engName).once('value')))
+    .then(snaps=>{
+      const recs=[];
+      snaps.forEach((snap,i)=>snap.forEach(c=>recs.push({...c.val(),date:dates[i]})));
+      renderMyHistory(recs);
+    });
+}
+
+function saveRecord(record){
+  // Always update UI immediately
+  const localKey = 'local_' + Date.now().toString();
+  record._localKey = localKey;
+  todayRecords.push({...record, key:localKey});
+  persistTodayLocally();
+  renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+
+  // Also save to Firebase in background
+  if(db){
+    db.ref('checkins/'+todayKey).push(record)
+      .then(ref=>{
+        // Replace local record with Firebase key
+        const idx = todayRecords.findIndex(r=>r.key===localKey);
+        if(idx>=0) todayRecords[idx].key = ref.key;
+        persistTodayLocally();
+        console.log('Firebase saved:', ref.key);
+      })
+      .catch(err=>{
+        console.error('Firebase save failed:', err);
+        showToast('⚠️ Offline — saved locally');
+      });
+  }
+}
+
+function persistTodayLocally(){
+  // Save today's records to localStorage for instant reload
+  try{
+    localStorage.setItem('medpac_today_'+todayKey, JSON.stringify(todayRecords));
+    // Clean up old days (keep only last 2 days)
+    for(let i=2; i<30; i++){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const k = 'medpac_today_'+d.toISOString().split('T')[0];
+      localStorage.removeItem(k);
+    }
+  }catch(e){ console.warn('localStorage save failed:', e); }
+}
+
+function loadLocalCache(){
+  // Load today's records from localStorage instantly before Firebase responds
+  try{
+    const cached = localStorage.getItem('medpac_today_'+todayKey);
+    if(cached){
+      const records = JSON.parse(cached);
+      // Only use if same day
+      todayRecords = records.filter(r=>r.date===todayKey);
+      if(todayRecords.length>0){
+        renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+        console.log('Loaded '+todayRecords.length+' records from cache');
+      }
+    }
+  }catch(e){ console.warn('localStorage load failed:', e); }
+}
+
+// ── Camera ──
+function goCheckin(type){
+  document.getElementById('eng-name-input').blur(); // dismiss keyboard
+  // Auto-confirm name if typed in input but not yet set
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){
+      setName(typedName);
+      showToast('✅ Name set: ' + typedName);
+    } else {
+      showToast('Please enter your name first');
+      focusNameInput();
+      return;
+    }
+  }
+  switchScreen('checkin');
+  setTimeout(()=>startCamera(type), 300);
+}
+
+async function startCamera(type){
+  // Auto-confirm name if typed but not set
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){
+      setName(typedName);
+      showToast('✅ Name set: ' + typedName);
+    } else {
+      showToast('Set your name first'); focusNameInput(); return;
+    }
+  }
+
+  // Validate - only prevent check-out if never checked in today at all
+  const myRecords = todayRecords.filter(r=>r.name===engName);
+  const myIns = myRecords.filter(r=>r.type==='in');
+  if(type==='out' && myIns.length===0){ showToast('Please check in first'); return; }
+
+  currentCamType = type;
+  document.getElementById('cam-title').textContent = type==='in'?'📷 Check In Photo':'📷 Check Out Photo';
+  document.getElementById('cam-modal').classList.remove('hidden');
+  await openCameraStream();
+}
+
+async function openCameraStream(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); }
+  try{
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode: useFrontCam?'user':'environment', width:{ideal:1280}, height:{ideal:960} },
+      audio:false
+    });
+    document.getElementById('cam-video').srcObject = cameraStream;
+  } catch(e){
+    showToast('Camera not available: '+e.message);
+    closeCamera();
+  }
+}
+
+function flipCamera(){ useFrontCam=!useFrontCam; openCameraStream(); }
+
+function closeCamera(){
+  if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
+  document.getElementById('cam-modal').classList.add('hidden');
+}
+
+function handleSnap(){
+  snapPhoto().catch(e=>{
+    console.error('snapPhoto error:', e);
+    showToast('Error: ' + e.message);
+  });
+}
+
+async function loadMapTile(lat, lon){
+  // OpenStreetMap static tile — free, no API key
+  // Convert GPS to tile coordinates at zoom 15
+  const zoom = 15;
+  const n = Math.pow(2, zoom);
+  const xTile = Math.floor((parseFloat(lon) + 180) / 360 * n);
+  const latRad = parseFloat(lat) * Math.PI / 180;
+  const yTile = Math.floor((1 - Math.log(Math.tan(latRad) + 1/Math.cos(latRad)) / Math.PI) / 2 * n);
+
+  // Use a 3x3 grid of tiles for better coverage, center tile
+  const tileUrl = `https://tile.openstreetmap.org/${zoom}/${xTile}/${yTile}.png`;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = tileUrl;
+    setTimeout(() => resolve(null), 3000); // 3s timeout
+  });
+}
+
+async function snapPhoto(){
+  const video = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  const W = video.videoWidth||1280, H = video.videoHeight||960;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+
+  // Draw video frame
+  ctx.drawImage(video,0,0,W,H);
+
+  // Draw timestamp overlay (Timemark style)
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const dateStr = now.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const typeStr = currentCamType==='in'?'CHECK IN':'CHECK OUT';
+  const typeColor = currentCamType==='in'?'#1A9E6A':'#DC2626';
+
+  // Gradient bar at bottom
+  const grad = ctx.createLinearGradient(0,H*0.65,0,H);
+  grad.addColorStop(0,'rgba(0,0,0,0)');
+  grad.addColorStop(1,'rgba(0,0,0,0.88)');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,H*0.65,W,H*0.35);
+
+  // Layout from bottom up with fixed spacing
+  const lh = Math.round(H * 0.045); // line height
+  const fs_sm = Math.round(W * 0.022);
+  const fs_md = Math.round(W * 0.028);
+  const fs_lg = Math.round(W * 0.065);
+  const pad = 20;
+
+  // MEDPAC watermark (bottom right)
+  ctx.font = `bold ${fs_sm}px -apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.textAlign = 'right';
+  ctx.fillText('MEDPAC Field Service', W-pad, H-pad);
+  ctx.textAlign = 'left';
+
+  // Location (2nd from bottom)
+  let curY = H - pad*2 - lh*0.5;
+  if(gpsAddr && gpsAddr !== 'Location unavailable'){
+    ctx.font = `${fs_sm}px -apple-system,sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText('📍 ' + gpsAddr, pad, curY, W - pad*2);
+    curY -= lh;
+  }
+
+  // Name
+  ctx.font = `bold ${fs_md}px -apple-system,sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(engName, pad, curY);
+  curY -= lh * 1.1;
+
+  // Date
+  ctx.font = `${fs_md}px -apple-system,sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillText(dateStr, pad, curY);
+  curY -= lh * 1.6;
+
+  // Time (large)
+  ctx.font = `bold ${fs_lg}px -apple-system,sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(timeStr, pad, curY);
+  curY -= lh * 1.4;
+
+  // Draw map thumbnail in top-right corner if GPS available
+  if(gpsLat && gpsLon){
+    try{
+      const mapImg = await loadMapTile(gpsLat, gpsLon);
+      if(mapImg){
+        const mSize = Math.round(W * 0.22); // ~22% of width
+        const mX = W - mSize - 14;
+        const mY = 14;
+        // White border
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mX-3, mY-3, mSize+6, mSize+6);
+        // Draw map tile
+        ctx.drawImage(mapImg, mX, mY, mSize, mSize);
+        // Red dot at center (location marker)
+        const cx = mX + mSize/2, cy = mY + mSize/2;
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.arc(cx, cy-4, 6, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#DC2626';
+        ctx.beginPath();
+        ctx.moveTo(cx-5, cy-4);
+        ctx.lineTo(cx+5, cy-4);
+        ctx.lineTo(cx, cy+4);
+        ctx.closePath();
+        ctx.fill();
+        // White circle inside marker
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx, cy-4, 2.5, 0, Math.PI*2);
+        ctx.fill();
+        // Small label
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(mX, mY+mSize-16, mSize, 16);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold 10px -apple-system,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('© OpenStreetMap', mX+mSize/2, mY+mSize-4);
+        ctx.textAlign = 'left';
+      }
+    } catch(e){ console.warn('Map load failed:', e); }
+  }
+
+  // Type badge
+  const bh = Math.round(H * 0.042);
+  const bw = typeStr.length * Math.round(W*0.016) + 24;
+  ctx.fillStyle = typeColor;
+  roundRect(ctx, pad, curY - bh + 6, bw, bh, 8);
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${fs_sm}px -apple-system,sans-serif`;
+  ctx.fillText(typeStr, pad + 10, curY - 4);
+
+  // Medium size: max 600px, quality 0.55 — good balance of quality & speed
+  const MAX_DIM = 600;
+  let outCanvas = canvas;
+  if(W > MAX_DIM || H > MAX_DIM){
+    const ratio = Math.min(MAX_DIM/W, MAX_DIM/H);
+    outCanvas = document.createElement('canvas');
+    outCanvas.width = Math.round(W*ratio);
+    outCanvas.height = Math.round(H*ratio);
+    outCanvas.getContext('2d').drawImage(canvas,0,0,outCanvas.width,outCanvas.height);
+  }
+  const photoData = outCanvas.toDataURL('image/jpeg', 0.55);
+  closeCamera();
+  processCheckin(photoData, now, timeStr, dateStr);
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ── Process check-in ──
+async function processCheckin(photoData, now, timeStr, dateStr){
+  // Show preview immediately
+  showStampPreview(photoData, timeStr, dateStr);
+
+  // Save record first (don't wait for upload)
+  const record = {
+    name: engName,
+    type: currentCamType,
+    time: timeStr,
+    date: todayKey,
+    lat: gpsLat||'',
+    lon: gpsLon||'',
+    addr: gpsAddr||'',
+    photoUrl: '',
+    timestamp: Date.now()
+  };
+  saveRecord(record);
+  // Force UI update
+  setTimeout(()=>{
+    updateCiStatus();
+    updateHomeStatus();
+    renderTodayList();
+  }, 100);
+  showToast(currentCamType==='in'?`✅ Checked in at ${timeStr}`:`👋 Checked out at ${timeStr}`);
+  loadMyHistory();
+
+  // Upload photo in background
+  const filename = `MEDPAC_CI_${engName.replace(/\s/g,'_')}_${currentCamType.toUpperCase()}_${todayKey}_${timeStr.replace(/:/g,'')}.jpg`;
+  let photoUrl = '';
+
+  try{
+    setUploadStatus('📤 Uploading photo...');
+    photoUrl = await uploadPhotoToDrive(photoData, filename);
+    setUploadStatus('✅ Photo saved to Drive!');
+    setTimeout(()=>setUploadStatus(''),3000);
+  } catch(e){
+    setUploadStatus('⚠️ Photo upload failed — record saved');
+    setTimeout(()=>setUploadStatus(''),4000);
+    console.warn('Photo upload failed:', e);
+    return;
+  }
+
+}
+
+async function uploadPhotoToDrive(dataUrl, filename){
+  // Direct single POST — no chunking needed for medium-size photos
+  const base64 = dataUrl.split(',')[1];
+  const gasUrl = APPS_SCRIPT_URL + '?action=savePhoto'
+    + '&filename=' + encodeURIComponent(filename)
+    + '&eng=' + encodeURIComponent(engName);
+  const proxyUrl = WORKER_URL + '/?url=' + encodeURIComponent(gasUrl);
+  const resp = await fetch(proxyUrl, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'data=' + encodeURIComponent(base64)
+  });
+  const txt = await resp.text();
+  const json = JSON.parse(txt);
+  if(json.status !== 'ok') throw new Error(json.message || 'Upload failed');
+  return json.url || '';
+}
+
+function setUploadStatus(msg){
+  const el=document.getElementById('upload-status');
+  if(msg){ el.textContent=msg; el.style.display='block'; }
+  else el.style.display='none';
+}
+
+function showStampPreview(photoData, timeStr, dateStr){
+  document.getElementById('last-photo-wrap').style.display='block';
+  document.getElementById('last-photo-img').src = photoData;
+}
+
+// ── UI renders ──
+function updateHomeStatus(){
+  if(!engName) return;
+  const myRecs = todayRecords.filter(r=>r.name===engName).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  const myIns = myRecs.filter(r=>r.type==='in');
+  const myOuts = myRecs.filter(r=>r.type==='out');
+  const lastRec = myRecs[myRecs.length-1];
+  const firstIn = myIns[0];
+  const lastOut = myOuts[myOuts.length-1];
+  document.getElementById('home-ci-status').textContent =
+    myIns.length>0 ? `✓ ${myIns.length}x In (first: ${firstIn.time})` : 'Not checked in';
+  document.getElementById('home-ci-status').style.color =
+    myIns.length>0 ? 'var(--green)' : 'var(--muted)';
+  document.getElementById('home-co-status').textContent =
+    myOuts.length>0 ? `✓ ${myOuts.length}x Out (last: ${lastOut.time})` : myIns.length>0 ? 'Tap to check out' : '—';
+  document.getElementById('home-co-status').style.color =
+    myOuts.length>0 ? 'var(--red)' : 'var(--muted)';
+}
+
+function updateCiStatus(){
+  if(!engName) return;
+  const myRecs = todayRecords.filter(r=>r.name===engName).sort((a,b)=>(a.timestamp||0)-(b.timestamp||0));
+  const myIns = myRecs.filter(r=>r.type==='in');
+  const myOuts = myRecs.filter(r=>r.type==='out');
+  const badge = document.getElementById('ci-status-badge');
+  const text = document.getElementById('ci-status-text');
+  const btnIn = document.getElementById('ci-btn-in');
+  const btnOut = document.getElementById('ci-btn-out');
+  const lastRec = myRecs[myRecs.length-1];
+
+  if(myRecs.length===0){
+    badge.innerHTML='<span class="badge badge-gray">Not checked in</span>';
+    text.textContent='Tap Check In to start your day';
+    btnIn.disabled=false; btnOut.disabled=true;
+  } else if(lastRec.type==='in'){
+    badge.innerHTML='<span class="badge badge-green">✓ Checked In</span>';
+    text.textContent=`Last check-in at ${lastRec.time} (${myRecs.length} record${myRecs.length>1?'s':''} today)`;
+    btnIn.disabled=false; btnOut.disabled=false;
+  } else {
+    badge.innerHTML='<span class="badge badge-amber">Checked Out</span>';
+    text.textContent=`Last check-out at ${lastRec.time} (${myRecs.length} record${myRecs.length>1?'s':''} today)`;
+    btnIn.disabled=false; btnOut.disabled=false;
+  }
+}
+
+function renderTodayList(){
+  const el=document.getElementById('home-today-list');
+  if(!todayRecords.length){ el.innerHTML='<div class="empty">No check-ins yet today</div>'; return; }
+  // Group by name, show all events
+  const byName={};
+  todayRecords.forEach(r=>{
+    if(!byName[r.name]) byName[r.name]=[];
+    byName[r.name].push(r);
+  });
+  Object.values(byName).forEach(recs=>recs.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)));
+  el.innerHTML=Object.entries(byName).map(([name,recs])=>{
+    const ins=recs.filter(r=>r.type==='in');
+    const outs=recs.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    const isActive=recs[recs.length-1].type==='in';
+    const hrs=firstIn&&lastOut?calcDur(firstIn.time,lastOut.time):'';
+    const events=recs.map(r=>`<span style="color:${r.type==='in'?'var(--green)':'var(--red)'};">${r.type==='in'?'▶':'■'} ${r.time}</span>`).join(' ');
+    return `<div class="hist-row">
+      <div class="hist-dot ${isActive?'hist-dot-in':'hist-dot-gray'}"></div>
+      <div class="hist-body">
+        <div class="hist-name">${name}</div>
+        <div class="hist-sub" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:3px">${events}</div>
+        ${hrs?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Total: ${hrs}</div>`:''}
+      </div>
+      <span class="badge ${isActive?'badge-green':'badge-gray'}">${isActive?'Active':'Done'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderMyHistory(recs){
+  const el=document.getElementById('ci-history');
+  if(!recs.length){ el.innerHTML='<div class="empty">No records in last 7 days</div>'; return; }
+  // Group by date, show ALL events
+  const byDate={};
+  recs.forEach(r=>{
+    if(!byDate[r.date]) byDate[r.date]=[];
+    byDate[r.date].push(r);
+  });
+  Object.values(byDate).forEach(d=>d.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)));
+  el.innerHTML=Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,dayRecs])=>{
+    const ins=dayRecs.filter(r=>r.type==='in');
+    const outs=dayRecs.filter(r=>r.type==='out');
+    const firstIn=ins[0], lastOut=outs[outs.length-1];
+    const isActive=dayRecs[dayRecs.length-1].type==='in';
+    const dur=firstIn&&lastOut?calcDur(firstIn.time,lastOut.time):'';
+    const events=dayRecs.map(r=>`
+      <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+        <span style="font-size:12px;font-weight:700;color:${r.type==='in'?'var(--green)':'var(--red)'}">${r.type==='in'?'▶ CHECK IN':'■ CHECK OUT'}</span>
+        <span style="font-size:12px;color:var(--text)">${r.time}</span>
+        ${r.photoUrl?`<a href="${r.photoUrl}" target="_blank" style="font-size:11px;color:var(--blue)">📷</a>`:''}
+      </div>`).join('');
+    return `<div class="hist-row">
+      <div class="hist-dot ${isActive?'hist-dot-in':'hist-dot-gray'}"></div>
+      <div class="hist-body" style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="hist-name">${formatDateShort(date)}</div>
+          ${dur?`<span style="font-size:11px;color:var(--muted)">${dur}</span>`:'<span style="font-size:11px;color:var(--muted)">${isActive?"active":"—"}</span>'}
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${date} · ${dayRecs.length} record${dayRecs.length>1?'s':''}</div>
+        ${events}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDashboard(){
+  const byName={};
+  todayRecords.forEach(r=>{if(!byName[r.name])byName[r.name]={};byName[r.name][r.type]=r;});
+  const active=Object.values(byName).filter(r=>r.in&&!r.out).length;
+  const done=Object.values(byName).filter(r=>r.in&&r.out).length;
+  document.getElementById('stat-in').textContent=active;
+  document.getElementById('stat-done').textContent=done;
+
+  const el=document.getElementById('dash-eng-list');
+  if(!Object.keys(byName).length){ el.innerHTML='<div class="empty">No check-ins today</div>'; }
+  else el.innerHTML=Object.entries(byName).map(([name,recs])=>{
+    const ini=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const inR=recs.in,outR=recs.out;
+    const active=inR&&!outR;
+    return `<div class="eng-row">
+      <div class="eng-avatar-sm" style="${active?'background:var(--green-lt);color:var(--green)':''}">${ini}</div>
+      <div class="eng-info">
+        <div class="eng-nm">${name}</div>
+        <div class="eng-st">${inR?`In ${inR.time}${outR?' → Out '+outR.time:''}`:' Not checked in'}</div>
+      </div>
+      <span class="badge ${active?'badge-green':outR?'badge-gray':'badge-gray'}">${active?'Active':outR?'Done':'Absent'}</span>
+    </div>`;
+  }).join('');
+
+  const tl=document.getElementById('dash-timeline');
+  const events=todayRecords.map(r=>({time:r.time,name:r.name,type:r.type,ts:r.timestamp||0}))
+    .sort((a,b)=>a.ts-b.ts);
+  if(!events.length) tl.innerHTML='<div class="empty">No activity yet</div>';
+  else tl.innerHTML=events.map(e=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--muted);width:46px;flex-shrink:0">${e.time}</div>
+      <div class="hist-dot ${e.type==='in'?'hist-dot-in':'hist-dot-out'}"></div>
+      <div style="font-size:13px">${e.name} <span style="color:${e.type==='in'?'var(--green)':'var(--red)'};">${e.type==='in'?'checked in':'checked out'}</span></div>
+    </div>`).join('');
+}
+
+// ── Navigation ──
+function switchScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(name+'-screen').classList.add('active');
+  document.getElementById('nav-'+name)?.classList.add('active');
+  if(name==='checkin') updateCiStatus();
+  if(name==='dashboard') renderDashboard();
+  if(name==='weekly-plan') loadWeeklyPlans();
+  window.scrollTo(0,0);
+}
+function openServiceReport(){
+  if(!engName){
+    const typedName = document.getElementById('eng-name-input').value.trim();
+    if(typedName){ setName(typedName); }
+    else { showToast('Set your name first'); focusNameInput(); return; }
+  }
+  window.open(SERVICE_REPORT_URL,'_blank');
+}
+
+// ── Helpers ──
+function formatDateShort(dateStr){
+  const d=new Date(dateStr+'T00:00:00');
+  return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+}
+function calcDur(inT,outT){
+  try{
+    const [ih,im]=inT.split(':').map(Number);
+    const [oh,om]=outT.split(':').map(Number);
+    let mins=(oh*60+om)-(ih*60+im);
+    if(mins<0) mins+=24*60; // overnight shift — add 24 hours
+    if(mins<=0) return '';
+    return Math.floor(mins/60)+'h '+(mins%60)+'m';
+  }catch(e){return '';}
+}
+function showToast(msg,dur=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ── Reports ──
+function initReportSelectors(){
+  const monthSel = document.getElementById('report-month');
+  const yearSel = document.getElementById('report-year');
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  months.forEach((m,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i+1;
+    opt.textContent = m;
+    monthSel.appendChild(opt);
+  });
+  const now = new Date();
+  monthSel.value = now.getMonth()+1;
+  for(let y=now.getFullYear(); y>=now.getFullYear()-2; y--){
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    yearSel.appendChild(opt);
+  }
+  yearSel.value = now.getFullYear();
+}
+
+async function viewMonthlyHistory(){
+  const month = parseInt(document.getElementById('report-month').value);
+  const year = parseInt(document.getElementById('report-year').value);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthName = monthNames[month-1];
+
+  const historyCard = document.getElementById('monthly-history-card');
+  const historyList = document.getElementById('monthly-history-list');
+  const monthLabel = document.getElementById('mh-month-label');
+
+  historyCard.style.display = 'block';
+  monthLabel.textContent = monthName + ' ' + year;
+  historyList.innerHTML = '<div class="empty">⏳ Loading...</div>';
+  document.getElementById('report-preview-card').style.display = 'none';
+
+  if(!db){ historyList.innerHTML = '<div class="empty">Firebase not connected</div>'; return; }
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dates = [];
+  for(let d=1; d<=daysInMonth; d++){
+    const dd = String(d).padStart(2,'0');
+    const mm = String(month).padStart(2,'0');
+    dates.push(`${year}-${mm}-${dd}`);
+  }
+
+  const snaps = await Promise.all(dates.map(date=>db.ref('checkins/'+date).once('value')));
+
+  // Build: date -> [{name, type, time}]
+  const byDate = {};
+  let hasAnyData = false;
+
+  snaps.forEach((snap, idx)=>{
+    const date = dates[idx];
+    const dayRecords = {}; // name -> {in, out, inAddr, outAddr, inLat, inLon, outLat, outLon}
+    snap.forEach(child=>{
+      const r = child.val();
+      if(!r.name) return;
+      hasAnyData = true;
+      if(!dayRecords[r.name]) dayRecords[r.name] = {in:'', out:'', inAddr:'', outAddr:'', inLat:'', inLon:'', outLat:'', outLon:''};
+      if(r.type==='in'){
+        dayRecords[r.name].in = r.time;
+        dayRecords[r.name].inAddr = r.addr||'';
+        dayRecords[r.name].inLat = r.lat||'';
+        dayRecords[r.name].inLon = r.lon||'';
+      }
+      if(r.type==='out'){
+        dayRecords[r.name].out = r.time;
+        dayRecords[r.name].outAddr = r.addr||'';
+        dayRecords[r.name].outLat = r.lat||'';
+        dayRecords[r.name].outLon = r.lon||'';
+      }
+    });
+    if(Object.keys(dayRecords).length > 0){
+      byDate[date] = dayRecords;
+    }
+  });
+
+  if(!hasAnyData){
+    historyList.innerHTML = '<div class="empty">No check-in records for '+monthName+' '+year+'</div>';
+    return;
+  }
+
+  // Render grouped by day, most recent first
+  const sortedDates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  historyList.innerHTML = sortedDates.map(date=>{
+    const d = new Date(date+'T00:00:00');
+    const dayLabel = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const engineers = Object.entries(byDate[date]).sort((a,b)=>a[0].localeCompare(b[0]));
+
+    const engineerRows = engineers.map(([name, rec])=>{
+      const hrs = (rec.in && rec.out) ? calcDur(rec.in, rec.out) : '';
+      const inMapLink = (rec.inLat && rec.inLon) ? `https://www.openstreetmap.org/?mlat=${rec.inLat}&mlon=${rec.inLon}#map=17/${rec.inLat}/${rec.inLon}` : '';
+      const outMapLink = (rec.outLat && rec.outLon) ? `https://www.openstreetmap.org/?mlat=${rec.outLat}&mlon=${rec.outLon}#map=17/${rec.outLat}/${rec.outLon}` : '';
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;font-size:13px;font-weight:600">${name}</div>
+          <div style="font-size:12px;color:var(--green);width:54px">${rec.in?'▶ '+rec.in:''}</div>
+          <div style="font-size:12px;color:var(--red);width:54px">${rec.out?'■ '+rec.out:''}</div>
+          <div style="font-size:11px;color:var(--muted);width:50px;text-align:right">${hrs}</div>
+        </div>
+        ${rec.inAddr?`<div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          In: ${rec.inAddr} ${inMapLink?`<a href="${inMapLink}" target="_blank" style="color:var(--blue);font-weight:600">View map ↗</a>`:''}
+        </div>`:''}
+        ${rec.outAddr?`<div style="font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:4px">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Out: ${rec.outAddr} ${outMapLink?`<a href="${outMapLink}" target="_blank" style="color:var(--blue);font-weight:600">View map ↗</a>`:''}
+        </div>`:''}
+      </div>`;
+    }).join('');
+
+    return `<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px">📅 ${dayLabel}</div>
+      ${engineerRows}
+    </div>`;
+  }).join('');
+}
+
+async function generateReport(){
+  const month = parseInt(document.getElementById('report-month').value);
+  const year = parseInt(document.getElementById('report-year').value);
+  const monthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][month-1];
+
+  document.getElementById('report-status').textContent = '⏳ Loading data...';
+  document.getElementById('report-preview-card').style.display='none';
+
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  // Get all days in the month
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const dates = [];
+  for(let d=1; d<=daysInMonth; d++){
+    const dd = String(d).padStart(2,'0');
+    const mm = String(month).padStart(2,'0');
+    dates.push(`${year}-${mm}-${dd}`);
+  }
+
+  // Fetch all checkins for the month
+  document.getElementById('report-status').textContent = '⏳ Fetching '+dates.length+' days...';
+  const snaps = await Promise.all(dates.map(date=>db.ref('checkins/'+date).once('value')));
+
+  // Build data: { engineerName: { date: {in, out, hours} } }
+  const data = {}; // engineer -> date -> {in, out, hours}
+  const engineers = new Set();
+
+  snaps.forEach((snap, idx)=>{
+    const date = dates[idx];
+    snap.forEach(child=>{
+      const r = child.val();
+      if(!r.name) return;
+      engineers.add(r.name);
+      if(!data[r.name]) data[r.name] = {};
+      if(!data[r.name][date]) data[r.name][date] = {in:'', out:'', hours:''};
+      if(r.type==='in') data[r.name][date].in = r.time;
+      if(r.type==='out') data[r.name][date].out = r.time;
+    });
+  });
+
+  // Calculate hours for each day
+  engineers.forEach(eng=>{
+    dates.forEach(date=>{
+      const rec = data[eng]?.[date];
+      if(rec && rec.in && rec.out){
+        rec.hours = calcDur(rec.in, rec.out);
+      }
+    });
+  });
+
+  if(engineers.size === 0){
+    document.getElementById('report-status').textContent = '⚠️ No data found for '+monthName+' '+year;
+    return;
+  }
+  document.getElementById('report-status').textContent = '';
+
+  // Build CSV
+  const engList = [...engineers].sort();
+  const rows = [];
+
+  // Header
+  rows.push(['Engineer', 'Date', 'Check In', 'Check Out', 'Hours']);
+
+  // Data rows
+  engList.forEach(eng=>{
+    dates.forEach(date=>{
+      const rec = data[eng]?.[date];
+      const inT = rec?.in || '';
+      const outT = rec?.out || '';
+      const hrs = rec?.hours || '';
+      if(inT || outT){ // only include days with data
+        rows.push([eng, date, inT, outT, hrs]);
+      }
+    });
+    // Total row per engineer
+    let totalMins = 0;
+    dates.forEach(date=>{
+      const rec = data[eng]?.[date];
+      if(rec?.in && rec?.out){
+        try{
+          const [ih,im] = rec.in.split(':').map(Number);
+          const [oh,om] = rec.out.split(':').map(Number);
+          totalMins += (oh*60+om)-(ih*60+im);
+        }catch(e){}
+      }
+    });
+    if(totalMins > 0){
+      const totalH = Math.floor(totalMins/60)+'h '+(totalMins%60)+'m';
+      rows.push([eng, 'TOTAL', '', '', totalH]);
+      rows.push(['','','','','']); // blank separator
+    }
+  });
+
+  // Convert to CSV string
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+
+  // Show preview table
+  const previewCard = document.getElementById('report-preview-card');
+  const preview = document.getElementById('report-preview');
+  previewCard.style.display='block';
+  const previewRows = rows.slice(0, Math.min(11, rows.length));
+  preview.innerHTML = '<table style="border-collapse:collapse;width:100%">' +
+    previewRows.map((r,i)=>`<tr style="background:${i===0?'var(--blue-lt)':''}">` +
+      r.map(c=>`<td style="padding:4px 6px;border:1px solid var(--border);white-space:nowrap;${i===0?'font-weight:700;color:var(--blue)':''}">${c}</td>`).join('') +
+    '</tr>').join('') +
+    '</table>' + (rows.length > 11 ? `<div style="margin-top:6px;color:var(--muted)">...and ${rows.length-11} more rows</div>` : '');
+
+  // Download CSV
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MEDPAC_Attendance_${monthName}_${year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  showToast('✅ CSV downloaded!', 3000);
+}
+
+// ── Quick CSV export from check-in page ──
+async function exportMyCSV(){
+  if(!engName){ showToast('Set your name first'); return; }
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  showToast('⏳ Loading data...');
+
+  // Get last 30 days
+  const dates = [];
+  for(let i=29; i>=0; i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  const snaps = await Promise.all(
+    dates.map(date=>db.ref('checkins/'+date).orderByChild('name').equalTo(engName).once('value'))
+  );
+
+  const rows = [['Name','Date','Check In','Check Out','Hours']];
+  let totalMins = 0;
+
+  dates.forEach((date, idx)=>{
+    const dayData = {in:'', out:''};
+    snaps[idx].forEach(child=>{
+      const r = child.val();
+      if(r.type==='in') dayData.in = r.time;
+      if(r.type==='out') dayData.out = r.time;
+    });
+    if(dayData.in || dayData.out){
+      let hrs = '';
+      if(dayData.in && dayData.out){
+        try{
+          const [ih,im]=dayData.in.split(':').map(Number);
+          const [oh,om]=dayData.out.split(':').map(Number);
+          const mins=(oh*60+om)-(ih*60+im);
+          if(mins>0){ totalMins+=mins; hrs=Math.floor(mins/60)+'h '+(mins%60)+'m'; }
+        }catch(e){}
+      }
+      rows.push([engName, date, dayData.in, dayData.out, hrs]);
+    }
+  });
+
+  // Total row
+  if(totalMins>0){
+    rows.push([engName,'TOTAL','','',Math.floor(totalMins/60)+'h '+(totalMins%60)+'m']);
+  }
+
+  if(rows.length===1){ showToast('No data found in last 30 days'); return; }
+
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `MEDPAC_${engName.replace(/\s/g,'_')}_Last30Days.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV downloaded!', 3000);
+}
+
+// ── Weekly Plan ──
+let wpCurrentWeekOffset = 0;
+let wpEditingKey = null;
+let wpPlans = []; // cached plans for current week
+
+function getWeekDates(offset){
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
+  const dates = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+function changeWeek(dir){
+  wpCurrentWeekOffset += dir;
+  loadWeeklyPlans();
+}
+
+async function loadWeeklyPlans(){
+  const dates = getWeekDates(wpCurrentWeekOffset);
+  const start = dates[0], end = dates[6];
+
+  // Update header labels
+  const fmt = d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  document.getElementById('wp-week-label').textContent = 'Week '+getWeekNum(dates[0]);
+  document.getElementById('wp-week-range').textContent = fmt(start)+' – '+fmt(end);
+
+  if(!db){ renderWpGrid([], dates); return; }
+
+  // Fetch all plans for this week from Firebase
+  const snaps = await Promise.all(dates.map(d=>db.ref('weekly_plans/'+d).once('value')));
+  wpPlans = [];
+  snaps.forEach((snap,i)=>{
+    snap.forEach(child=>{
+      wpPlans.push({...child.val(), key:child.key, date:dates[i]});
+    });
+  });
+
+  renderWpGrid(wpPlans, dates);
+  renderMyWpList(wpPlans);
+}
+
+function getWeekNum(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const start = new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-start)/86400000+start.getDay()+1)/7);
+}
+
+function renderWpGrid(plans, dates){
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const engineers = [...new Set(plans.map(p=>p.engineerName))].sort();
+  if(engName && !engineers.includes(engName)) engineers.unshift(engName);
+
+  const cols = 8; // name col + 7 days
+  let html = `<div style="display:grid;grid-template-columns:80px repeat(7,1fr);gap:2px;min-width:480px">`;
+
+  // Header row
+  html += `<div style="font-size:11px;font-weight:700;color:var(--muted);padding:4px 0">Engineer</div>`;
+  dates.forEach((d,i)=>{
+    const dt = new Date(d+'T00:00:00');
+    const isToday = d===new Date().toISOString().split('T')[0];
+    html += `<div style="text-align:center;font-size:10px;font-weight:700;color:${isToday?'var(--blue)':'var(--muted)'};padding:4px 0">
+      <div>${dayNames[i]}</div>
+      <div style="font-size:11px;color:${isToday?'var(--blue)':'var(--text)'}">${dt.getDate()}</div>
+    </div>`;
+  });
+
+  // Engineer rows
+  if(engineers.length===0){
+    html += `<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted);font-size:13px">No plans yet — tap Add Plan to start</div>`;
+  } else {
+    engineers.forEach(eng=>{
+      const ini = eng.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      html += `<div style="font-size:11px;font-weight:600;padding:4px 2px;display:flex;align-items:center;gap:4px;overflow:hidden">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--blue-lt);color:var(--blue);font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ini}</div>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${eng.split(' ')[0]}</span>
+      </div>`;
+      dates.forEach(date=>{
+        const dayPlans = plans.filter(p=>p.engineerName===eng&&p.date===date);
+        if(dayPlans.length===0){
+          html += `<div class="wp-cell wp-cell-empty" onclick="openAddPlan('${date}','${eng}')">+</div>`;
+        } else {
+          html += `<div>`;
+          dayPlans.forEach(p=>{
+            const statusClass = p.status==='done'?'wp-cell-done':p.status==='in-progress'?'wp-cell-in-progress':'wp-cell-planned';
+            html += `<div class="wp-cell ${statusClass}" onclick="openEditPlan('${p.key}','${date}')">
+              <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.customer||''}</div>
+              <div style="opacity:.8">${p.jobType||''}</div>
+            </div>`;
+          });
+          html += `</div>`;
+        }
+      });
+    });
+  }
+
+  html += `</div>`;
+  document.getElementById('wp-grid').innerHTML = html;
+}
+
+function renderMyWpList(plans){
+  const el = document.getElementById('wp-my-list');
+  const mine = plans.filter(p=>p.engineerName===engName).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!mine.length){ el.innerHTML='<div class="empty">No plans for you this week</div>'; return; }
+  const statusIcon = s=>s==='done'?'🟢':s==='in-progress'?'🟡':'🔵';
+  const statusLabel = s=>s==='done'?'Done':s==='in-progress'?'In Progress':'Planned';
+  el.innerHTML = mine.map(p=>`
+    <div class="hist-row" onclick="openEditPlan('${p.key}','${p.date}')">
+      <div class="hist-body">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="hist-name">${formatDateShort(p.date)}</div>
+          <span style="font-size:12px">${statusIcon(p.status)} ${statusLabel(p.status)}</span>
+        </div>
+        <div style="font-size:13px;font-weight:600;margin-top:2px">${p.customer}</div>
+        <div style="font-size:12px;color:var(--muted)">${p.jobType}${p.equipment?' · '+p.equipment:''}</div>
+        ${p.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px">${p.note}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openAddPlan(date='', engineer=''){
+  wpEditingKey = null;
+  document.getElementById('wp-modal-title').textContent = 'Add Plan';
+  document.getElementById('wp-eng').value = engineer || engName || '';
+  document.getElementById('wp-date').value = date || new Date().toISOString().split('T')[0];
+  document.getElementById('wp-customer').value = '';
+  document.getElementById('wp-jobtype').value = 'PM';
+  document.getElementById('wp-equipment').value = '';
+  document.getElementById('wp-note').value = '';
+  document.getElementById('wp-status').value = 'planned';
+  document.getElementById('wp-delete-btn').style.display = 'none';
+  document.getElementById('wp-modal').classList.remove('hidden');
+}
+
+function openEditPlan(key, date){
+  const plan = wpPlans.find(p=>p.key===key&&p.date===date);
+  if(!plan) return;
+  wpEditingKey = {key, date};
+  document.getElementById('wp-modal-title').textContent = 'Edit Plan';
+  document.getElementById('wp-eng').value = plan.engineerName||'';
+  document.getElementById('wp-date').value = plan.date||'';
+  document.getElementById('wp-customer').value = plan.customer||'';
+  document.getElementById('wp-jobtype').value = plan.jobType||'PM';
+  document.getElementById('wp-equipment').value = plan.equipment||'';
+  document.getElementById('wp-note').value = plan.note||'';
+  document.getElementById('wp-status').value = plan.status||'planned';
+  document.getElementById('wp-delete-btn').style.display = 'block';
+  document.getElementById('wp-modal').classList.remove('hidden');
+}
+
+async function savePlan(){
+  const eng = document.getElementById('wp-eng').value.trim();
+  const date = document.getElementById('wp-date').value;
+  const customer = document.getElementById('wp-customer').value.trim();
+  const jobType = document.getElementById('wp-jobtype').value;
+  if(!eng||!date||!customer){ showToast('Please fill Engineer, Date and Customer'); return; }
+
+  const plan = {
+    engineerName: eng,
+    date,
+    customer,
+    jobType,
+    equipment: document.getElementById('wp-equipment').value.trim(),
+    note: document.getElementById('wp-note').value.trim(),
+    status: document.getElementById('wp-status').value,
+    updatedAt: Date.now(),
+    createdBy: engName||'unknown'
+  };
+
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  if(wpEditingKey){
+    await db.ref('weekly_plans/'+wpEditingKey.date+'/'+wpEditingKey.key).update(plan);
+    showToast('✅ Plan updated');
+  } else {
+    await db.ref('weekly_plans/'+date).push(plan);
+    showToast('✅ Plan saved');
+  }
+  closeWpModal();
+  loadWeeklyPlans();
+}
+
+async function deletePlan(){
+  if(!wpEditingKey) return;
+  if(!confirm('Delete this plan?')) return;
+  await db.ref('weekly_plans/'+wpEditingKey.date+'/'+wpEditingKey.key).remove();
+  showToast('Plan deleted');
+  closeWpModal();
+  loadWeeklyPlans();
+}
+
+function closeWpModal(e){
+  if(!e||e.target===document.getElementById('wp-modal'))
+    document.getElementById('wp-modal').classList.add('hidden');
+}
+
+// ── Job List ──
+let allJobs = [];
+let jobFilter = 'all';
+let editingJobKey = null;
+let currentWpTab = 'plan';
+
+function switchWpTab(tab){
+  currentWpTab = tab;
+  const planTab = document.getElementById('wp-plan-tab');
+  const jobsTab = document.getElementById('wp-jobs-tab');
+  const planBtn = document.getElementById('wp-tab-plan');
+  const jobsBtn = document.getElementById('wp-tab-jobs');
+  const weekNav = document.getElementById('wp-week-nav');
+  const weekLabel = document.getElementById('wp-week-label');
+  const screenTitle = document.getElementById('wp-screen-title');
+
+  if(tab==='plan'){
+    planTab.style.display='block';
+    jobsTab.style.display='none';
+    planBtn.style.background='#fff';
+    planBtn.style.color='var(--amber)';
+    jobsBtn.style.background='rgba(255,255,255,.25)';
+    jobsBtn.style.color='#fff';
+    weekNav.style.display='flex';
+    weekLabel.style.display='block';
+    screenTitle.textContent='📅 Weekly Plan';
+  } else {
+    planTab.style.display='none';
+    jobsTab.style.display='block';
+    planBtn.style.background='rgba(255,255,255,.25)';
+    planBtn.style.color='#fff';
+    jobsBtn.style.background='#fff';
+    jobsBtn.style.color='var(--blue)';
+    weekNav.style.display='none';
+    weekLabel.style.display='none';
+    screenTitle.textContent='📋 Service Job List';
+    loadJobs();
+  }
+}
+
+async function loadJobs(){
+  if(!db){ renderJobs([]); return; }
+  const snap = await db.ref('service_jobs').orderByChild('createdAt').once('value');
+  allJobs = [];
+  snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
+  allJobs.reverse(); // newest first
+  renderJobs(allJobs);
+}
+
+function filterJobs(filter){
+  jobFilter = filter;
+  // Update filter button styles
+  ['all','pending','in-progress','done'].forEach(f=>{
+    const btn = document.getElementById('jf-'+f);
+    if(btn){
+      btn.style.background = f===filter ? 'var(--blue)' : 'var(--white)';
+      btn.style.color = f===filter ? '#fff' : 'var(--text)';
+      btn.style.border = f===filter ? 'none' : '1px solid var(--border)';
+    }
+  });
+  renderJobs(allJobs);
+}
+
+function renderJobs(jobs){
+  const el = document.getElementById('job-list-container');
+  const filtered = jobFilter==='all' ? jobs : jobs.filter(j=>j.status===jobFilter);
+
+  if(!filtered.length){
+    el.innerHTML = `<div class="empty">No ${jobFilter==='all'?'':''+jobFilter+' '}jobs yet</div>`;
+    return;
+  }
+
+  const statusIcon = s=>s==='done'?'🟢':s==='in-progress'?'🟡':'🔴';
+  const statusLabel = s=>s==='done'?'Done':s==='in-progress'?'In Progress':'Pending';
+  const statusColor = s=>s==='done'?'var(--green)':s==='in-progress'?'var(--amber)':'var(--red)';
+
+  el.innerHTML = filtered.map(j=>{
+    const isAssignedToMe = j.assignee===engName;
+    const isOpen = !j.assignee;
+    const dueDate = j.dueDate ? new Date(j.dueDate+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+    const overdue = j.dueDate && j.status!=='done' && j.dueDate < new Date().toISOString().split('T')[0];
+
+    return `<div class="card" style="margin-bottom:10px;padding:14px;${j.status==='done'?'opacity:.6':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text)">${j.title}</div>
+          ${j.customer?`<div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${j.customer}</div>`:''}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <span style="font-size:11px;font-weight:700;color:${statusColor(j.status)}">${statusIcon(j.status)} ${statusLabel(j.status)}</span>
+            ${j.jobType?`<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 6px;border-radius:10px">${j.jobType}</span>`:''}
+            ${dueDate?`<span style="font-size:11px;background:${overdue?'var(--red-lt)':'var(--surface)'};color:${overdue?'var(--red)':'var(--muted)'};padding:2px 6px;border-radius:10px">${overdue?'⚠️ ':''}Due ${dueDate}</span>`:''}
+          </div>
+          ${j.assignee?
+            `<div style="font-size:12px;color:var(--blue);margin-top:6px;font-weight:600">👤 Assigned: ${j.assignee}</div>`:
+            `<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600">🟢 Open — anyone can take this</div>`
+          }
+          ${j.desc?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${j.desc}</div>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Created by ${j.createdBy||'unknown'}</div>
+        </div>
+        <button onclick="openEditJob('${j.key}')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:12px;cursor:pointer;flex-shrink:0">Edit</button>
+      </div>
+      ${j.status!=='done'?`
+      <div style="display:flex;gap:8px;margin-top:12px">
+        ${j.status==='pending'?`<button onclick="updateJobStatus('${j.key}','in-progress')" style="flex:1;padding:8px;background:var(--amber-lt);color:var(--amber);border:1px solid var(--amber);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">🟡 Start Job</button>`:''}
+        ${j.status==='pending'&&isOpen?`<button onclick="assignJobToMe('${j.key}')" style="flex:1;padding:8px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">👋 Take Job</button>`:''}
+        <button onclick="updateJobStatus('${j.key}','done')" style="flex:1;padding:8px;background:var(--green-lt);color:var(--green);border:1px solid var(--green);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">✅ Mark Done</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function updateJobStatus(key, status){
+  if(!db) return;
+  await db.ref('service_jobs/'+key).update({
+    status,
+    updatedAt: Date.now(),
+    updatedBy: engName||'unknown'
+  });
+  showToast(status==='done'?'✅ Job marked as done!':'🟡 Job started!');
+  loadJobs();
+}
+
+async function assignJobToMe(key){
+  if(!engName){ showToast('Set your name first'); return; }
+  if(!db) return;
+  await db.ref('service_jobs/'+key).update({
+    assignee: engName,
+    status: 'in-progress',
+    updatedAt: Date.now(),
+    updatedBy: engName
+  });
+  showToast('👋 Job assigned to you & started!');
+  loadJobs();
+}
+
+function openAddJob(){
+  editingJobKey = null;
+  document.getElementById('job-modal-title').textContent = 'Add Job';
+  document.getElementById('job-title').value = '';
+  document.getElementById('job-customer').value = '';
+  document.getElementById('job-type').value = 'PM';
+  document.getElementById('job-assignee').value = '';
+  document.getElementById('job-due').value = '';
+  document.getElementById('job-desc').value = '';
+  document.getElementById('job-status').value = 'pending';
+  document.getElementById('job-delete-btn').style.display = 'none';
+  document.getElementById('job-modal').classList.remove('hidden');
+}
+
+function openEditJob(key){
+  const job = allJobs.find(j=>j.key===key);
+  if(!job) return;
+  editingJobKey = key;
+  document.getElementById('job-modal-title').textContent = 'Edit Job';
+  document.getElementById('job-title').value = job.title||'';
+  document.getElementById('job-customer').value = job.customer||'';
+  document.getElementById('job-type').value = job.jobType||'PM';
+  document.getElementById('job-assignee').value = job.assignee||'';
+  document.getElementById('job-due').value = job.dueDate||'';
+  document.getElementById('job-desc').value = job.desc||'';
+  document.getElementById('job-status').value = job.status||'pending';
+  document.getElementById('job-delete-btn').style.display = 'block';
+  document.getElementById('job-modal').classList.remove('hidden');
+}
+
+async function saveJob(){
+  const title = document.getElementById('job-title').value.trim();
+  if(!title){ showToast('Please enter a job title'); return; }
+  if(!db){ showToast('Firebase not connected'); return; }
+
+  const job = {
+    title,
+    customer: document.getElementById('job-customer').value.trim(),
+    jobType: document.getElementById('job-type').value,
+    assignee: document.getElementById('job-assignee').value.trim(),
+    dueDate: document.getElementById('job-due').value,
+    desc: document.getElementById('job-desc').value.trim(),
+    status: document.getElementById('job-status').value,
+    updatedAt: Date.now(),
+    updatedBy: engName||'unknown'
+  };
+
+  if(editingJobKey){
+    await db.ref('service_jobs/'+editingJobKey).update(job);
+    showToast('✅ Job updated');
+  } else {
+    job.createdAt = Date.now();
+    job.createdBy = engName||'unknown';
+    await db.ref('service_jobs').push(job);
+    showToast('✅ Job added');
+  }
+  closeJobModal();
+  loadJobs();
+}
+
+async function deleteJob(){
+  if(!editingJobKey) return;
+  if(!confirm('Delete this job?')) return;
+  await db.ref('service_jobs/'+editingJobKey).remove();
+  showToast('Job deleted');
+  closeJobModal();
+  loadJobs();
+}
+
+function closeJobModal(e){
+  if(!e||e.target===document.getElementById('job-modal'))
+    document.getElementById('job-modal').classList.add('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
