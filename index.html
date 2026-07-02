@@ -1982,6 +1982,7 @@ async function saveJob(){
     await db.ref('service_jobs').push(job);
     showToast('✅ Job added');
   }
+  editingJobKey = null; // reset before closing
   closeJobModal();
   loadJobs();
 }
@@ -1996,8 +1997,10 @@ async function deleteJob(){
 }
 
 function closeJobModal(e){
-  if(!e||e.target===document.getElementById('job-modal'))
+  if(!e||e.target===document.getElementById('job-modal')){
     document.getElementById('job-modal').classList.add('hidden');
+    editingJobKey = null; // always reset on close
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
