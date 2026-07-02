@@ -426,7 +426,9 @@ function init(){
   // Clock
   startClock();
 
-  // Load today
+  // Load from local cache first (instant)
+  loadLocalCache();
+  // Then sync with Firebase (authoritative)
   loadToday();
   // Init report selectors
   initReportSelectors();
@@ -457,8 +459,39 @@ function setName(name){
   document.getElementById('eng-pill-name').textContent = name.split(' ')[0];
   document.getElementById('home-sub').textContent = 'Welcome, ' + name;
   document.getElementById('ci-hero-name').textContent = name;
-  updateHomeStatus();
-  loadMyHistory();
+
+  // Immediately check Firebase for today's records for this name
+  if(db){
+    db.ref('checkins/'+todayKey).orderByChild('name').equalTo(name).once('value').then(snap=>{
+      const existingRecs = [];
+      snap.forEach(child=>existingRecs.push({...child.val(), key:child.key}));
+      if(existingRecs.length > 0){
+        // Merge with todayRecords — add any missing records
+        existingRecs.forEach(r=>{
+          if(!todayRecords.find(tr=>tr.key===r.key)){
+            todayRecords.push(r);
+          }
+        });
+        persistTodayLocally();
+        renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+        const ins = existingRecs.filter(r=>r.type==='in');
+        const outs = existingRecs.filter(r=>r.type==='out');
+        if(ins.length>0){
+          const lastRec = existingRecs.sort((a,b)=>(a.timestamp||0)-(b.timestamp||0)).slice(-1)[0];
+          showToast(lastRec.type==='in' ? 
+            `⚠️ You already checked in today at ${ins[0].time}` : 
+            `✅ You checked in & out today`
+          , 4000);
+        }
+      } else {
+        updateHomeStatus();
+        loadMyHistory();
+      }
+    }).catch(()=>{ updateHomeStatus(); loadMyHistory(); });
+  } else {
+    updateHomeStatus();
+    loadMyHistory();
+  }
 }
 
 // ── GPS ──
@@ -508,6 +541,7 @@ function loadToday(){
     // Keep local records not yet in Firebase
     const localRecords = todayRecords.filter(r=>r.key && r.key.startsWith('local_'));
     todayRecords = [...fbRecords, ...localRecords];
+    persistTodayLocally();
     renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
   });
 }
@@ -528,6 +562,7 @@ function saveRecord(record){
   const localKey = 'local_' + Date.now().toString();
   record._localKey = localKey;
   todayRecords.push({...record, key:localKey});
+  persistTodayLocally();
   renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
 
   // Also save to Firebase in background
@@ -537,6 +572,7 @@ function saveRecord(record){
         // Replace local record with Firebase key
         const idx = todayRecords.findIndex(r=>r.key===localKey);
         if(idx>=0) todayRecords[idx].key = ref.key;
+        persistTodayLocally();
         console.log('Firebase saved:', ref.key);
       })
       .catch(err=>{
@@ -544,6 +580,35 @@ function saveRecord(record){
         showToast('⚠️ Offline — saved locally');
       });
   }
+}
+
+function persistTodayLocally(){
+  // Save today's records to localStorage for instant reload
+  try{
+    localStorage.setItem('medpac_today_'+todayKey, JSON.stringify(todayRecords));
+    // Clean up old days (keep only last 2 days)
+    for(let i=2; i<30; i++){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const k = 'medpac_today_'+d.toISOString().split('T')[0];
+      localStorage.removeItem(k);
+    }
+  }catch(e){ console.warn('localStorage save failed:', e); }
+}
+
+function loadLocalCache(){
+  // Load today's records from localStorage instantly before Firebase responds
+  try{
+    const cached = localStorage.getItem('medpac_today_'+todayKey);
+    if(cached){
+      const records = JSON.parse(cached);
+      // Only use if same day
+      todayRecords = records.filter(r=>r.date===todayKey);
+      if(todayRecords.length>0){
+        renderTodayList(); renderDashboard(); updateHomeStatus(); updateCiStatus();
+        console.log('Loaded '+todayRecords.length+' records from cache');
+      }
+    }
+  }catch(e){ console.warn('localStorage load failed:', e); }
 }
 
 // ── Camera ──
