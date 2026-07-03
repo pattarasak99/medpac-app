@@ -1880,9 +1880,9 @@ function filterJobs(filter){
 
 function renderJobs(jobs){
   const el = document.getElementById('job-list-container');
-  if(!el) return; // guard if not visible
-  // Always update allJobs cache first
-  if(jobs && jobs.length >= allJobs.length) allJobs = jobs;
+  if(!el) return;
+  // Always replace allJobs with latest data
+  if(jobs) allJobs = jobs;
   const filtered = jobFilter==='all' ? allJobs : allJobs.filter(j=>j.status===jobFilter);
 
   if(!filtered.length){
