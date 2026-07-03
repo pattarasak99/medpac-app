@@ -1849,8 +1849,8 @@ function loadJobsRealtime(){
 }
 
 async function loadJobs(){
-  // Deprecated - use loadJobsRealtime() instead
-  loadJobsRealtime();
+  // No-op: real-time listener handles all updates
+  console.log('loadJobs() called but suppressed - using realtime listener');
 }
 
 function filterJobs(filter){
@@ -1926,7 +1926,7 @@ async function updateJobStatus(key, status){
     updatedBy: engName||'unknown'
   });
   showToast(status==='done'?'✅ Job marked as done!':'🟡 Job started!');
-  loadJobs();
+  // real-time listener handles UI update
 }
 
 async function assignJobToMe(key){
@@ -1939,7 +1939,7 @@ async function assignJobToMe(key){
     updatedBy: engName
   });
   showToast('👋 Job assigned to you & started!');
-  loadJobs();
+  // real-time listener handles UI update
 }
 
 function openAddJob(){
@@ -2015,7 +2015,7 @@ async function deleteJob(){
   await db.ref('service_jobs/'+editingJobKey).remove();
   showToast('Job deleted');
   closeJobModal();
-  loadJobs();
+  // real-time listener handles UI update
 }
 
 function closeJobModal(e){
