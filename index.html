@@ -1827,26 +1827,25 @@ function switchWpTab(tab){
     weekNav.style.display='none';
     weekLabel.style.display='none';
     screenTitle.textContent='📋 Service Job List';
+    allJobs=[]; // clear cache before reload
     loadJobsRealtime();
   }
 }
 
 let jobsListener = null;
 function loadJobsRealtime(){
-  if(!db){ renderJobs([]); return; }
-  // Detach previous listener if exists
-  if(jobsListener){ db.ref('service_jobs').off('value', jobsListener); jobsListener=null; }
+  if(!db){ allJobs=[]; renderJobs(allJobs); return; }
+  // Detach old listener
+  if(jobsListener){ try{ db.ref('service_jobs').off('value', jobsListener); }catch(e){} jobsListener=null; }
+  // Attach new real-time listener
   jobsListener = db.ref('service_jobs').on('value', snap=>{
     const newJobs = [];
-    snap.forEach(child=>newJobs.push({...child.val(), key:child.key}));
+    snap.forEach(child=>{ newJobs.push({...child.val(), key:child.key}); });
     newJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     allJobs = newJobs;
-    const el = document.getElementById('job-list-container');
-    if(el) renderJobs(allJobs); // only render if tab is visible
-  }, e=>{
-    console.error('Jobs listener error:', e);
-    showToast('Error loading jobs: '+e.message);
-  });
+    console.log('Jobs loaded from Firebase:', allJobs.length);
+    renderJobs(allJobs);
+  }, err=>{ console.error('Jobs error:', err); showToast('Error: '+err.message); });
 }
 
 async function loadJobs(){
@@ -1879,11 +1878,11 @@ function filterJobs(filter){
 }
 
 function renderJobs(jobs){
+  if(jobs !== undefined) allJobs = jobs;
   const el = document.getElementById('job-list-container');
-  if(!el) return;
-  // Always replace allJobs with latest data
-  if(jobs) allJobs = jobs;
+  if(!el){ console.warn('job-list-container not found'); return; }
   const filtered = jobFilter==='all' ? allJobs : allJobs.filter(j=>j.status===jobFilter);
+  console.log('renderJobs: total='+allJobs.length+' filtered='+filtered.length+' filter='+jobFilter);
 
   if(!filtered.length){
     el.innerHTML = `<div class="empty">No ${jobFilter==='all'?'':''+jobFilter+' '}jobs yet</div>`;
@@ -2013,8 +2012,9 @@ async function saveJob(){
     }
     editingJobKey = null;
     closeJobModal();
-    // Realtime listener will auto-update, but force reload as backup
-    setTimeout(()=>loadJobs(), 500);
+    // Force explicit reload after save
+    allJobs=[];
+    loadJobsRealtime();
   } catch(e){
     console.error('saveJob error:', e);
     showToast('❌ Error saving job: '+e.message);
