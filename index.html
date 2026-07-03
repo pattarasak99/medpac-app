@@ -1827,8 +1827,9 @@ function switchWpTab(tab){
     weekNav.style.display='none';
     weekLabel.style.display='none';
     screenTitle.textContent='📋 Service Job List';
-    allJobs=[]; // clear cache before reload
-    loadJobsRealtime();
+    // Only reload if listener not already attached
+    if(!jobsListener) loadJobsRealtime();
+    else renderJobs(allJobs); // just re-render existing data
   }
 }
 
@@ -2021,7 +2022,7 @@ async function deleteJob(){
 function closeJobModal(e){
   if(!e||e.target===document.getElementById('job-modal')){
     document.getElementById('job-modal').classList.add('hidden');
-    editingJobKey = null; // always reset on close
+    setTimeout(()=>{ editingJobKey = null; }, 100); // delay reset so deleteJob can finish
   }
 }
 
