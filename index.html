@@ -1849,18 +1849,8 @@ function loadJobsRealtime(){
 }
 
 async function loadJobs(){
-  if(!db){ renderJobs([]); return; }
-  try{
-    const snap = await db.ref('service_jobs').once('value');
-    allJobs = [];
-    snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
-    // Sort by createdAt descending (newest first)
-    allJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    renderJobs(allJobs);
-  } catch(e){
-    console.error('loadJobs error:', e);
-    showToast('Error loading jobs: '+e.message);
-  }
+  // Deprecated - use loadJobsRealtime() instead
+  loadJobsRealtime();
 }
 
 function filterJobs(filter){
@@ -2012,9 +2002,7 @@ async function saveJob(){
     }
     editingJobKey = null;
     closeJobModal();
-    // Force explicit reload after save
-    allJobs=[];
-    loadJobsRealtime();
+    // Real-time listener handles updates automatically — no manual reload needed
   } catch(e){
     console.error('saveJob error:', e);
     showToast('❌ Error saving job: '+e.message);
