@@ -1834,16 +1834,18 @@ function switchWpTab(tab){
 let jobsListener = null;
 function loadJobsRealtime(){
   if(!db){ renderJobs([]); return; }
-  // Detach previous listener
-  if(jobsListener) db.ref('service_jobs').off('value', jobsListener);
+  // Detach previous listener if exists
+  if(jobsListener){ db.ref('service_jobs').off('value', jobsListener); jobsListener=null; }
   jobsListener = db.ref('service_jobs').on('value', snap=>{
-    allJobs = [];
-    snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
-    allJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-    renderJobs(allJobs);
+    const newJobs = [];
+    snap.forEach(child=>newJobs.push({...child.val(), key:child.key}));
+    newJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    allJobs = newJobs;
+    const el = document.getElementById('job-list-container');
+    if(el) renderJobs(allJobs); // only render if tab is visible
   }, e=>{
     console.error('Jobs listener error:', e);
-    showToast('Error loading jobs');
+    showToast('Error loading jobs: '+e.message);
   });
 }
 
@@ -1878,7 +1880,10 @@ function filterJobs(filter){
 
 function renderJobs(jobs){
   const el = document.getElementById('job-list-container');
-  const filtered = jobFilter==='all' ? jobs : jobs.filter(j=>j.status===jobFilter);
+  if(!el) return; // guard if not visible
+  // Always update allJobs cache first
+  if(jobs && jobs.length >= allJobs.length) allJobs = jobs;
+  const filtered = jobFilter==='all' ? allJobs : allJobs.filter(j=>j.status===jobFilter);
 
   if(!filtered.length){
     el.innerHTML = `<div class="empty">No ${jobFilter==='all'?'':''+jobFilter+' '}jobs yet</div>`;
@@ -2008,7 +2013,8 @@ async function saveJob(){
     }
     editingJobKey = null;
     closeJobModal();
-    loadJobs();
+    // Realtime listener will auto-update, but force reload as backup
+    setTimeout(()=>loadJobs(), 500);
   } catch(e){
     console.error('saveJob error:', e);
     showToast('❌ Error saving job: '+e.message);
