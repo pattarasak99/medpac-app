@@ -1827,24 +1827,26 @@ function switchWpTab(tab){
     weekNav.style.display='none';
     weekLabel.style.display='none';
     screenTitle.textContent='📋 Service Job List';
-    // Only reload if listener not already attached
-    if(!jobsListener) loadJobsRealtime();
-    else renderJobs(allJobs); // just re-render existing data
+    loadJobsRealtime(); // handles reuse internally
   }
 }
 
 let jobsListener = null;
 function loadJobsRealtime(){
   if(!db){ allJobs=[]; renderJobs(allJobs); return; }
-  // Detach old listener
-  if(jobsListener){ try{ db.ref('service_jobs').off('value', jobsListener); }catch(e){} jobsListener=null; }
-  // Attach new real-time listener
+  // Only attach listener once - reuse if already attached
+  if(jobsListener){
+    console.log('Reusing existing listener, allJobs='+allJobs.length);
+    renderJobs(allJobs);
+    return;
+  }
+  console.log('Attaching new Firebase listener for service_jobs');
   jobsListener = db.ref('service_jobs').on('value', snap=>{
     const newJobs = [];
     snap.forEach(child=>{ newJobs.push({...child.val(), key:child.key}); });
     newJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
     allJobs = newJobs;
-    console.log('Jobs loaded from Firebase:', allJobs.length);
+    console.log('Firebase jobs update: '+allJobs.length+' jobs');
     renderJobs(allJobs);
   }, err=>{ console.error('Jobs error:', err); showToast('Error: '+err.message); });
 }
@@ -1872,6 +1874,12 @@ function renderJobs(jobs){
   if(jobs !== undefined) allJobs = jobs;
   const el = document.getElementById('job-list-container');
   if(!el){ console.warn('job-list-container not found'); return; }
+  // Check if jobs tab is actually visible before rendering
+  const jobsTab = document.getElementById('wp-jobs-tab');
+  if(jobsTab && jobsTab.style.display==='none'){ 
+    console.log('renderJobs: jobs tab hidden, skipping render');
+    return; 
+  }
   const filtered = jobFilter==='all' ? allJobs : allJobs.filter(j=>j.status===jobFilter);
   console.log('renderJobs: total='+allJobs.length+' filtered='+filtered.length+' filter='+jobFilter);
 
