@@ -1827,17 +1827,39 @@ function switchWpTab(tab){
     weekNav.style.display='none';
     weekLabel.style.display='none';
     screenTitle.textContent='📋 Service Job List';
-    loadJobs();
+    loadJobsRealtime();
   }
+}
+
+let jobsListener = null;
+function loadJobsRealtime(){
+  if(!db){ renderJobs([]); return; }
+  // Detach previous listener
+  if(jobsListener) db.ref('service_jobs').off('value', jobsListener);
+  jobsListener = db.ref('service_jobs').on('value', snap=>{
+    allJobs = [];
+    snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
+    allJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    renderJobs(allJobs);
+  }, e=>{
+    console.error('Jobs listener error:', e);
+    showToast('Error loading jobs');
+  });
 }
 
 async function loadJobs(){
   if(!db){ renderJobs([]); return; }
-  const snap = await db.ref('service_jobs').orderByChild('createdAt').once('value');
-  allJobs = [];
-  snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
-  allJobs.reverse(); // newest first
-  renderJobs(allJobs);
+  try{
+    const snap = await db.ref('service_jobs').once('value');
+    allJobs = [];
+    snap.forEach(child=>allJobs.push({...child.val(), key:child.key}));
+    // Sort by createdAt descending (newest first)
+    allJobs.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    renderJobs(allJobs);
+  } catch(e){
+    console.error('loadJobs error:', e);
+    showToast('Error loading jobs: '+e.message);
+  }
 }
 
 function filterJobs(filter){
@@ -1973,18 +1995,24 @@ async function saveJob(){
     updatedBy: engName||'unknown'
   };
 
-  if(editingJobKey){
-    await db.ref('service_jobs/'+editingJobKey).update(job);
-    showToast('✅ Job updated');
-  } else {
-    job.createdAt = Date.now();
-    job.createdBy = engName||'unknown';
-    await db.ref('service_jobs').push(job);
-    showToast('✅ Job added');
+  try{
+    if(editingJobKey){
+      await db.ref('service_jobs/'+editingJobKey).update(job);
+      showToast('✅ Job updated');
+    } else {
+      job.createdAt = Date.now();
+      job.createdBy = engName||'unknown';
+      const ref = await db.ref('service_jobs').push(job);
+      console.log('Job saved with key:', ref.key);
+      showToast('✅ Job added');
+    }
+    editingJobKey = null;
+    closeJobModal();
+    loadJobs();
+  } catch(e){
+    console.error('saveJob error:', e);
+    showToast('❌ Error saving job: '+e.message);
   }
-  editingJobKey = null; // reset before closing
-  closeJobModal();
-  loadJobs();
 }
 
 async function deleteJob(){
