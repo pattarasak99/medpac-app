@@ -597,6 +597,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <button onclick="exportMLCSV()" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">⬇ CSV</button>
     </div>
 
+    <!-- Date Range Export -->
+    <div class="card" style="margin-bottom:12px;padding:12px 14px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px">📅 Export by Date Range</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600">From</label>
+          <input type="date" id="ml-range-from" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:13px;margin-top:3px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);font-weight:600">To</label>
+          <input type="date" id="ml-range-to" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:13px;margin-top:3px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="setMLPreset()" style="flex:1;padding:8px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">🔄 26th–25th</button>
+        <button onclick="viewMLRange()" style="flex:1;padding:8px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">👁 View</button>
+        <button onclick="exportMLRange()" style="flex:1;padding:8px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">⬇ CSV</button>
+      </div>
+    </div>
+
     <!-- Quick add buttons -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
       <button onclick="openMLModal('odometer')" style="padding:10px 4px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
@@ -2267,6 +2287,10 @@ async function loadMLEntries(){
   const info = getMLMonthInfo();
   document.getElementById('ml-month-label').textContent = info.label;
   document.getElementById('ml-eng-label').textContent = engName || 'Set your name first';
+  // Auto-fill date range with current billing cycle if empty
+  if(!document.getElementById('ml-range-from').value){
+    setMLPreset();
+  }
 
   if(!db){ renderMLEntries(); return; }
 
@@ -2624,6 +2648,152 @@ function renderJobs2(){
       </div>`:''}
     </div>`;
   }).join('');
+}
+
+// ── Mileage Date Range ──
+function setMLPreset(){
+  // Auto-fill 26th of last month to 25th of current month
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth()-1, 26);
+  const to = new Date(now.getFullYear(), now.getMonth(), 25);
+  document.getElementById('ml-range-from').value = from.toISOString().split('T')[0];
+  document.getElementById('ml-range-to').value = to.toISOString().split('T')[0];
+  showToast('📅 Set to billing cycle: 26th–25th');
+}
+
+async function getMLRangeEntries(){
+  const fromVal = document.getElementById('ml-range-from').value;
+  const toVal = document.getElementById('ml-range-to').value;
+  if(!fromVal || !toVal){ showToast('Please select From and To dates'); return null; }
+  if(fromVal > toVal){ showToast('From date must be before To date'); return null; }
+  if(!db){ showToast('Firebase not connected'); return null; }
+
+  // Get all dates in range
+  const dates = [];
+  const start = new Date(fromVal+'T00:00:00');
+  const end = new Date(toVal+'T00:00:00');
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  showToast('⏳ Loading '+dates.length+' days...');
+  const snaps = await Promise.all(dates.map(date=>db.ref('mileage_logs/'+date).once('value')));
+  const entries = [];
+  snaps.forEach((snap, i)=>{
+    snap.forEach(child=>entries.push({...child.val(), key:child.key, date:dates[i]}));
+  });
+
+  // Filter by engineer if on "mine" tab
+  return mlTab==='mine' ? entries.filter(e=>e.engineerName===engName) : entries;
+}
+
+async function viewMLRange(){
+  const entries = await getMLRangeEntries();
+  if(!entries) return;
+
+  const fromVal = document.getElementById('ml-range-from').value;
+  const toVal = document.getElementById('ml-range-to').value;
+  const fmt = d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+
+  if(!entries.length){
+    showToast('No entries found in this date range');
+    return;
+  }
+
+  // Sort and render in log list
+  entries.sort((a,b)=>b.date.localeCompare(a.date)||(a.time||'').localeCompare(b.time||''));
+
+  // Temporarily override mlEntries for rendering
+  const savedEntries = mlEntries;
+  mlEntries = entries;
+
+  // Update header to show date range
+  document.getElementById('ml-month-label').textContent = `${fmt(fromVal)} – ${fmt(toVal)}`;
+  renderMLEntries();
+
+  // Restore
+  mlEntries = savedEntries;
+  showToast(`✅ Showing ${entries.length} entries`);
+}
+
+async function exportMLRange(){
+  const entries = await getMLRangeEntries();
+  if(!entries) return;
+
+  const fromVal = document.getElementById('ml-range-from').value;
+  const toVal = document.getElementById('ml-range-to').value;
+
+  if(!entries.length){ showToast('No entries found in this date range'); return; }
+
+  entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+
+  // Summary calculations
+  let totalKm=0, fleetFuel=0, personalFuel=0, totalParking=0, totalToll=0;
+  const odoByEngineerDate = {};
+  entries.forEach(e=>{
+    if(e.type==='fuel'){
+      if(e.fuelPay==='fleet') fleetFuel+=parseFloat(e.amount||0);
+      else personalFuel+=parseFloat(e.amount||0);
+    }
+    if(e.type==='parking') totalParking+=parseFloat(e.amount||0);
+    if(e.type==='tollway') totalToll+=parseFloat(e.amount||0);
+  });
+
+  // Calculate km from odometer pairs
+  const odoEntries = entries.filter(e=>e.type==='odometer').sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+  const byEngDate = {};
+  odoEntries.forEach(e=>{
+    const k = e.engineerName+'|'+e.date;
+    if(!byEngDate[k]) byEngDate[k]=[];
+    byEngDate[k].push(e);
+  });
+  Object.values(byEngDate).forEach(odos=>{
+    for(let i=1;i<odos.length;i++){
+      const km = parseFloat(odos[i].odometer||0)-parseFloat(odos[i-1].odometer||0);
+      if(km>0) totalKm+=km;
+    }
+  });
+
+  const rows = [
+    ['MEDPAC Mileage Report'],
+    [`Period: ${fromVal} to ${toVal}`],
+    [`Engineer: ${mlTab==='mine'?engName:'All Engineers'}`],
+    [''],
+    ['--- SUMMARY ---'],
+    ['Total Distance (km)', totalKm.toFixed(1)],
+    ['Fleet Card Fuel (฿)', fleetFuel.toFixed(0)],
+    ['Personal Fuel (฿)', personalFuel.toFixed(0)],
+    ['Parking (฿)', totalParking.toFixed(0)],
+    ['Tollway (฿)', totalToll.toFixed(0)],
+    ['Total Personal Expenses (฿)', (personalFuel+totalParking+totalToll).toFixed(0)],
+    [''],
+    ['--- DETAIL ---'],
+    ['Engineer','Date','Time','Type','Odometer (km)','Location/Route','Amount (฿)','Paid By','Liters','Note']
+  ];
+
+  entries.forEach(e=>{
+    rows.push([
+      e.engineerName, e.date, e.time||'', e.type,
+      e.type==='odometer'?(e.odometer||''):'',
+      e.location||e.route||'',
+      e.amount||'',
+      e.type==='fuel'?(e.fuelPay==='fleet'?'Fleet Card':'Personal'):
+        e.type==='odometer'?'':
+        'Personal',
+      e.liters||'',
+      e.note||''
+    ]);
+  });
+
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  a.download=`MEDPAC_Mileage_${fromVal}_to_${toVal}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV downloaded!');
 }
 
 document.addEventListener('DOMContentLoaded', init);
