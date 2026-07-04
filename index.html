@@ -228,10 +228,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="action-label">Service Report</div>
       <div class="action-sub">Create & save PDF</div>
     </div>
-    <div class="action-card" onclick="switchScreen('weekly-plan')">
-      <div class="action-icon" style="background:var(--amber-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/></svg></div>
-      <div class="action-label">Weekly Plan</div>
-      <div class="action-sub">Team schedule</div>
+    <div class="action-card" onclick="switchScreen('joblist')">
+      <div class="action-icon" style="background:var(--blue-lt)"><svg viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+      <div class="action-label">Job List</div>
+      <div class="action-sub">Shared task board</div>
+    </div>
+    <div class="action-card" onclick="switchScreen('mileage')">
+      <div class="action-icon" style="background:#FEF3C7"><svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v5"/><circle cx="16" cy="17" r="3"/><circle cx="8" cy="17" r="3"/></svg></div>
+      <div class="action-label">Mileage Log</div>
+      <div class="action-sub">Trip & expense record</div>
     </div>
   </div>
 
@@ -530,6 +535,182 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
 </div>
 
+<!-- JOB LIST SCREEN -->
+<div id="joblist-screen" class="screen">
+  <div style="background:linear-gradient(135deg,var(--blue) 0%,var(--blue-dk) 100%);padding:16px;text-align:center">
+    <div style="font-size:17px;font-weight:700;color:#fff">📋 Service Job List</div>
+    <div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">Shared team task board</div>
+  </div>
+  <div class="page-body">
+    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px">
+      <button id="jf2-all" onclick="filterJobs2('all')" style="padding:6px 14px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;white-space:nowrap">All</button>
+      <button id="jf2-pending" onclick="filterJobs2('pending')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🔴 Pending</button>
+      <button id="jf2-in-progress" onclick="filterJobs2('in-progress')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟡 In Progress</button>
+      <button id="jf2-done" onclick="filterJobs2('done')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;background:var(--white);color:var(--text);white-space:nowrap">🟢 Done</button>
+    </div>
+    <button onclick="openAddJob()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add Job
+    </button>
+    <div id="job-list-container2"></div>
+  </div>
+</div>
+
+<!-- MILEAGE LOG -->
+<div id="mileage-screen" class="screen">
+  <!-- Hero header -->
+  <div style="background:linear-gradient(135deg,#D97706 0%,#92400E 100%);padding:16px">
+    <div style="text-align:center;margin-bottom:10px">
+      <div style="font-size:17px;font-weight:700;color:#fff">🚗 Mileage Log</div>
+      <div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px" id="ml-eng-label"></div>
+    </div>
+    <!-- Month nav -->
+    <div style="display:flex;justify-content:center;align-items:center;gap:16px;margin-bottom:10px">
+      <button onclick="changeMLMonth(-1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center">‹</button>
+      <span style="color:#fff;font-size:14px;font-weight:700" id="ml-month-label">—</span>
+      <button onclick="changeMLMonth(1)" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center">›</button>
+    </div>
+    <!-- Summary bar -->
+    <div style="display:flex;justify-content:space-around;background:rgba(0,0,0,.15);border-radius:10px;padding:10px 0">
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;color:#fff" id="ml-sum-km">0</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7)">Total km</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,.2)"></div>
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;color:#fff" id="ml-sum-fuel">฿0</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7)">Fleet Fuel</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,.2)"></div>
+      <div style="text-align:center">
+        <div style="font-size:20px;font-weight:800;color:#fff" id="ml-sum-personal">฿0</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7)">Personal Exp</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <!-- Tab + Export -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button id="ml-tab-mine" onclick="switchMLTab('mine')" style="flex:1;padding:8px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">My Log</button>
+      <button id="ml-tab-all" onclick="switchMLTab('all')" style="flex:1;padding:8px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">All Engineers</button>
+      <button onclick="exportMLCSV()" style="padding:8px 12px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">⬇ CSV</button>
+    </div>
+
+    <!-- Quick add buttons -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+      <button onclick="openMLModal('odometer')" style="padding:10px 4px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:18px">🔢</span>
+        <span>Odometer</span>
+      </button>
+      <button onclick="openMLModal('fuel')" style="padding:10px 4px;background:#D97706;color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:18px">⛽</span>
+        <span>Fuel</span>
+      </button>
+      <button onclick="openMLModal('parking')" style="padding:10px 4px;background:var(--gray);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:18px">🅿️</span>
+        <span>Parking</span>
+      </button>
+      <button onclick="openMLModal('tollway')" style="padding:10px 4px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <span style="font-size:18px">🛣️</span>
+        <span>Tollway</span>
+      </button>
+    </div>
+
+    <!-- Log list -->
+    <div id="ml-log-list"><div class="empty">No entries this month</div></div>
+  </div>
+</div>
+
+<!-- ML Entry Modal -->
+<div class="modal-overlay hidden" id="ml-modal" onclick="closeMLModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:88vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 12px"></div>
+    <div style="font-size:17px;font-weight:700;margin-bottom:16px" id="ml-modal-title">Add Entry</div>
+
+    <!-- Common fields -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Date</label>
+        <input type="date" id="ml-f-date" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Time</label>
+        <input type="time" id="ml-f-time" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- ODOMETER fields -->
+    <div id="ml-fields-odometer" style="display:none">
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Odometer Reading (km) *</label>
+        <input type="number" id="ml-f-odo" placeholder="e.g. 12450" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:16px;margin-top:3px;box-sizing:border-box;font-weight:700">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Location</label>
+        <input type="text" id="ml-f-odo-loc" placeholder="e.g. Office, Bangkok Lab, Home" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- FUEL fields -->
+    <div id="ml-fields-fuel" style="display:none">
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Amount (฿) *</label>
+        <input type="number" id="ml-f-fuel-amt" placeholder="e.g. 400" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:16px;margin-top:3px;box-sizing:border-box;font-weight:700">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Paid By</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button id="ml-fleet-btn" onclick="setMLFuelPay('fleet')" style="flex:1;padding:10px;border-radius:var(--rs);border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer">💳 Fleet Card</button>
+          <button id="ml-personal-btn" onclick="setMLFuelPay('personal')" style="flex:1;padding:10px;border-radius:var(--rs);border:2px solid var(--border);background:var(--white);color:var(--text);font-size:13px;font-weight:700;cursor:pointer">💵 Personal</button>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Liters (optional)</label>
+        <input type="number" id="ml-f-fuel-liters" placeholder="e.g. 35" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- PARKING fields -->
+    <div id="ml-fields-parking" style="display:none">
+      <div style="margin-bottom:8px;padding:8px 12px;background:var(--amber-lt);border-radius:var(--rs);font-size:12px;color:var(--amber);font-weight:600">💵 Personal Pay only</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Amount (฿) *</label>
+        <input type="number" id="ml-f-park-amt" placeholder="e.g. 30" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:16px;margin-top:3px;box-sizing:border-box;font-weight:700">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Location (optional)</label>
+        <input type="text" id="ml-f-park-loc" placeholder="e.g. Bangkok Lab parking" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- TOLLWAY fields -->
+    <div id="ml-fields-tollway" style="display:none">
+      <div style="margin-bottom:8px;padding:8px 12px;background:var(--amber-lt);border-radius:var(--rs);font-size:12px;color:var(--amber);font-weight:600">💵 Personal Pay only</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Amount (฿) *</label>
+        <input type="number" id="ml-f-toll-amt" placeholder="e.g. 45" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:16px;margin-top:3px;box-sizing:border-box;font-weight:700">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Route (optional)</label>
+        <input type="text" id="ml-f-toll-route" placeholder="e.g. Chaeng Watthana, Si Rat" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+      </div>
+    </div>
+
+    <!-- Common note -->
+    <div style="margin-bottom:16px">
+      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Note (optional)</label>
+      <input type="text" id="ml-f-note" placeholder="Any additional note..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+    </div>
+
+    <button onclick="saveMLEntry()" id="ml-save-btn" style="width:100%;padding:14px;background:var(--amber);color:#fff;border:none;border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Save</button>
+    <div style="height:8px"></div>
+    <button id="ml-del-btn" onclick="deleteMLEntry()" style="display:none;width:100%;padding:14px;background:var(--red-lt);color:var(--red);border:1px solid var(--red);border-radius:var(--rs);font-size:15px;font-weight:700;cursor:pointer">Delete Entry</button>
+    <div style="height:8px"></div>
+    <button onclick="closeMLModal()" style="width:100%;padding:12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);font-size:15px;font-weight:600;cursor:pointer">Cancel</button>
+  </div>
+</div>
+
 <!-- Bottom Nav -->
 <div class="bottom-nav">
   <button class="nav-btn active" id="nav-home" onclick="switchScreen('home')">
@@ -544,9 +725,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     Dashboard
   </button>
-  <button class="nav-btn" id="nav-reports" onclick="switchScreen('reports')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    Reports
+  <button class="nav-btn" id="nav-joblist" onclick="switchScreen('joblist')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    Jobs
+  </button>
+  <button class="nav-btn" id="nav-mileage" onclick="switchScreen('mileage')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v5"/><circle cx="16" cy="17" r="3"/><circle cx="8" cy="17" r="3"/></svg>
+    Mileage
   </button>
 </div>
 
@@ -1256,7 +1441,8 @@ function switchScreen(name){
   document.getElementById('nav-'+name)?.classList.add('active');
   if(name==='checkin') updateCiStatus();
   if(name==='dashboard') renderDashboard();
-  if(name==='weekly-plan') loadWeeklyPlans();
+  if(name==='mileage') loadMLEntries();
+  if(name==='joblist'){ loadJobsRealtime(); setTimeout(renderJobs2, 300); }
   window.scrollTo(0,0);
 }
 function openServiceReport(){
@@ -2032,6 +2218,412 @@ function closeJobModal(e){
     document.getElementById('job-modal').classList.add('hidden');
     setTimeout(()=>{ editingJobKey = null; }, 100); // delay reset so deleteJob can finish
   }
+}
+
+
+// ── Mileage Log (Incremental) ──
+let mlEntries = [];      // all entries for current month
+let mlMonthOffset = 0;
+let mlTab = 'mine';
+let mlEditKey = null;
+let mlCurrentType = 'odometer';
+let mlFuelPay = 'fleet';
+
+function getMLMonthInfo(){
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() + mlMonthOffset, 1);
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const dates = [];
+  for(let i=1; i<=daysInMonth; i++){
+    const dd = String(i).padStart(2,'0');
+    const mm = String(month+1).padStart(2,'0');
+    dates.push(`${year}-${mm}-${dd}`);
+  }
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return { year, month, dates, label: monthNames[month]+' '+year };
+}
+
+function changeMLMonth(dir){
+  mlMonthOffset += dir;
+  loadMLEntries();
+}
+
+function switchMLTab(tab){
+  mlTab = tab;
+  const mine = document.getElementById('ml-tab-mine');
+  const all = document.getElementById('ml-tab-all');
+  mine.style.background = tab==='mine'?'var(--amber)':'var(--surface)';
+  mine.style.color = tab==='mine'?'#fff':'var(--text)';
+  mine.style.border = tab==='mine'?'none':'1px solid var(--border)';
+  all.style.background = tab==='all'?'var(--amber)':'var(--surface)';
+  all.style.color = tab==='all'?'#fff':'var(--text)';
+  all.style.border = tab==='all'?'none':'1px solid var(--border)';
+  renderMLEntries();
+}
+
+async function loadMLEntries(){
+  const info = getMLMonthInfo();
+  document.getElementById('ml-month-label').textContent = info.label;
+  document.getElementById('ml-eng-label').textContent = engName || 'Set your name first';
+
+  if(!db){ renderMLEntries(); return; }
+
+  const snaps = await Promise.all(info.dates.map(d=>db.ref('mileage_logs/'+d).once('value')));
+  mlEntries = [];
+  snaps.forEach((snap, i)=>{
+    snap.forEach(child=>{
+      mlEntries.push({...child.val(), key:child.key, date:info.dates[i]});
+    });
+  });
+  // Sort by date desc, then time asc within same day
+  mlEntries.sort((a,b)=>{
+    const dc = b.date.localeCompare(a.date);
+    if(dc!==0) return dc;
+    return (a.time||'').localeCompare(b.time||'');
+  });
+  renderMLEntries();
+}
+
+function renderMLEntries(){
+  const el = document.getElementById('ml-log-list');
+  if(!el) return;
+
+  const entries = mlTab==='mine'
+    ? mlEntries.filter(e=>e.engineerName===engName)
+    : mlEntries;
+
+  // Calculate monthly summaries
+  let totalKm=0, fleetFuel=0, personalExp=0;
+  entries.forEach(e=>{
+    if(e.type==='odometer' && e.pairedKm) totalKm += e.pairedKm;
+    if(e.type==='fuel'){
+      if(e.fuelPay==='fleet') fleetFuel += parseFloat(e.amount||0);
+      else personalExp += parseFloat(e.amount||0);
+    }
+    if(e.type==='parking'||e.type==='tollway') personalExp += parseFloat(e.amount||0);
+  });
+
+  document.getElementById('ml-sum-km').textContent = totalKm.toFixed(0);
+  document.getElementById('ml-sum-fuel').textContent = '฿'+fleetFuel.toFixed(0);
+  document.getElementById('ml-sum-personal').textContent = '฿'+personalExp.toFixed(0);
+
+  if(!entries.length){
+    el.innerHTML = '<div class="empty">No entries this month<br><br>Tap 🔢 Odometer, ⛽ Fuel, 🅿️ Parking or 🛣️ Tollway to add</div>';
+    return;
+  }
+
+  // Group by date
+  const byDate = {};
+  entries.forEach(e=>{ if(!byDate[e.date]) byDate[e.date]=[]; byDate[e.date].push(e); });
+
+  // Pair odometer entries to calculate km per trip
+  Object.values(byDate).forEach(dayEntries=>{
+    const odos = dayEntries.filter(e=>e.type==='odometer').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    odos.forEach((odo,i)=>{
+      if(i>0){
+        const prev = odos[i-1];
+        const km = parseFloat(odo.odometer||0) - parseFloat(prev.odometer||0);
+        if(km>0) odo.pairedKm = km;
+      }
+    });
+  });
+
+  const typeIcon = t=>({odometer:'🔢',fuel:'⛽',parking:'🅿️',tollway:'🛣️'})[t]||'📋';
+  const typeColor = t=>({odometer:'var(--blue)',fuel:'var(--amber)',parking:'var(--gray)',tollway:'var(--green)'})[t]||'var(--muted)';
+
+  el.innerHTML = Object.entries(byDate).sort((a,b)=>b[0].localeCompare(a[0])).map(([date, dayEntries])=>{
+    const d = new Date(date+'T00:00:00');
+    const dayLabel = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+
+    // Day totals
+    const dayOdos = dayEntries.filter(e=>e.type==='odometer').sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    let dayKm = 0;
+    dayOdos.forEach((o,i)=>{ if(i>0){ const km=parseFloat(o.odometer||0)-parseFloat(dayOdos[i-1].odometer||0); if(km>0) dayKm+=km; } });
+    const dayFuel = dayEntries.filter(e=>e.type==='fuel').reduce((s,e)=>s+parseFloat(e.amount||0),0);
+    const dayPark = dayEntries.filter(e=>e.type==='parking').reduce((s,e)=>s+parseFloat(e.amount||0),0);
+    const dayToll = dayEntries.filter(e=>e.type==='tollway').reduce((s,e)=>s+parseFloat(e.amount||0),0);
+    const dayPersonal = dayEntries.filter(e=>e.type==='fuel'&&e.fuelPay==='personal').reduce((s,e)=>s+parseFloat(e.amount||0),0) + dayPark + dayToll;
+
+    const entryRows = dayEntries.sort((a,b)=>(a.time||'').localeCompare(b.time||'')).map(e=>{
+      let detail = '';
+      if(e.type==='odometer'){
+        detail = `<span style="font-size:15px;font-weight:800;color:var(--blue)">${parseFloat(e.odometer||0).toLocaleString()} km</span>`;
+        if(e.location) detail += ` <span style="color:var(--muted);font-size:12px">@ ${e.location}</span>`;
+        if(e.pairedKm) detail += ` <span style="background:var(--blue-lt);color:var(--blue);padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">+${e.pairedKm.toFixed(1)} km</span>`;
+      } else if(e.type==='fuel'){
+        detail = `<span style="font-size:15px;font-weight:800;color:var(--amber)">฿${parseFloat(e.amount||0).toFixed(0)}</span>`;
+        detail += ` <span style="background:${e.fuelPay==='fleet'?'var(--blue-lt)':'var(--amber-lt)'};color:${e.fuelPay==='fleet'?'var(--blue)':'var(--amber)'};padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">${e.fuelPay==='fleet'?'💳 Fleet':'💵 Personal'}</span>`;
+        if(e.liters) detail += ` <span style="color:var(--muted);font-size:12px">${e.liters}L</span>`;
+      } else if(e.type==='parking'){
+        detail = `<span style="font-size:15px;font-weight:800;color:var(--gray)">฿${parseFloat(e.amount||0).toFixed(0)}</span> <span style="background:var(--surface);color:var(--muted);padding:1px 6px;border-radius:10px;font-size:11px;border:1px solid var(--border)">💵 Personal</span>`;
+        if(e.location) detail += ` <span style="color:var(--muted);font-size:12px">${e.location}</span>`;
+      } else if(e.type==='tollway'){
+        detail = `<span style="font-size:15px;font-weight:800;color:var(--green)">฿${parseFloat(e.amount||0).toFixed(0)}</span> <span style="background:var(--green-lt);color:var(--green);padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700">💵 Personal</span>`;
+        if(e.route) detail += ` <span style="color:var(--muted);font-size:12px">${e.route}</span>`;
+      }
+      return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openMLEdit('${e.key}','${e.date}')">
+        <div style="width:36px;height:36px;border-radius:50%;background:${typeColor(e.type)}22;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${typeIcon(e.type)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:var(--muted)">${e.time||''}</div>
+          <div style="margin-top:2px">${detail}</div>
+          ${e.note?`<div style="font-size:11px;color:var(--muted);margin-top:2px;font-style:italic">${e.note}</div>`:''}
+          ${mlTab==='all'?`<div style="font-size:11px;color:var(--blue);margin-top:2px">👤 ${e.engineerName}</div>`:''}
+        </div>
+        <div style="color:var(--muted);font-size:16px;flex-shrink:0">›</div>
+      </div>`;
+    }).join('');
+
+    const summaryParts = [];
+    if(dayKm>0) summaryParts.push(`🚗 ${dayKm.toFixed(1)} km`);
+    if(dayFuel>0) summaryParts.push(`⛽ ฿${dayFuel.toFixed(0)}`);
+    if(dayPersonal>0) summaryParts.push(`💵 ฿${dayPersonal.toFixed(0)}`);
+
+    return `<div class="card" style="margin-bottom:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--border)">
+        <div style="font-size:13px;font-weight:800;color:var(--blue)">📅 ${dayLabel}</div>
+        <div style="font-size:11px;color:var(--muted)">${summaryParts.join(' · ')}</div>
+      </div>
+      ${entryRows}
+    </div>`;
+  }).join('');
+}
+
+function openMLModal(type){
+  if(!engName){ showToast('Set your name first'); return; }
+  mlCurrentType = type;
+  mlEditKey = null;
+  mlFuelPay = 'fleet';
+
+  const now = new Date();
+  document.getElementById('ml-f-date').value = now.toISOString().split('T')[0];
+  document.getElementById('ml-f-time').value = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('ml-f-note').value = '';
+  document.getElementById('ml-del-btn').style.display = 'none';
+
+  // Reset all type-specific fields
+  document.getElementById('ml-f-odo').value = '';
+  document.getElementById('ml-f-odo-loc').value = '';
+  document.getElementById('ml-f-fuel-amt').value = '';
+  document.getElementById('ml-f-fuel-liters').value = '';
+  document.getElementById('ml-f-park-amt').value = '';
+  document.getElementById('ml-f-park-loc').value = '';
+  document.getElementById('ml-f-toll-amt').value = '';
+  document.getElementById('ml-f-toll-route').value = '';
+
+  const titles = {odometer:'🔢 Add Odometer Reading', fuel:'⛽ Add Fuel Cost', parking:'🅿️ Add Parking Cost', tollway:'🛣️ Add Tollway Cost'};
+  const colors = {odometer:'var(--blue)', fuel:'#D97706', parking:'var(--gray)', tollway:'var(--green)'};
+  document.getElementById('ml-modal-title').textContent = titles[type]||'Add Entry';
+  document.getElementById('ml-save-btn').style.background = colors[type]||'var(--amber)';
+
+  // Show/hide fields
+  ['odometer','fuel','parking','tollway'].forEach(t=>{
+    document.getElementById('ml-fields-'+t).style.display = t===type?'block':'none';
+  });
+
+  // Set fuel pay default
+  if(type==='fuel') setMLFuelPay('fleet');
+
+  document.getElementById('ml-modal').classList.remove('hidden');
+}
+
+function openMLEdit(key, date){
+  const entry = mlEntries.find(e=>e.key===key&&e.date===date);
+  if(!entry) return;
+  mlEditKey = {key, date};
+  mlCurrentType = entry.type;
+  mlFuelPay = entry.fuelPay||'fleet';
+
+  const titles = {odometer:'🔢 Edit Odometer', fuel:'⛽ Edit Fuel Cost', parking:'🅿️ Edit Parking', tollway:'🛣️ Edit Tollway'};
+  const colors = {odometer:'var(--blue)', fuel:'#D97706', parking:'var(--gray)', tollway:'var(--green)'};
+  document.getElementById('ml-modal-title').textContent = titles[entry.type]||'Edit Entry';
+  document.getElementById('ml-save-btn').style.background = colors[entry.type]||'var(--amber)';
+  document.getElementById('ml-del-btn').style.display = 'block';
+
+  document.getElementById('ml-f-date').value = entry.date||'';
+  document.getElementById('ml-f-time').value = entry.time||'';
+  document.getElementById('ml-f-note').value = entry.note||'';
+
+  document.getElementById('ml-f-odo').value = entry.odometer||'';
+  document.getElementById('ml-f-odo-loc').value = entry.location||'';
+  document.getElementById('ml-f-fuel-amt').value = entry.amount||'';
+  document.getElementById('ml-f-fuel-liters').value = entry.liters||'';
+  document.getElementById('ml-f-park-amt').value = entry.amount||'';
+  document.getElementById('ml-f-park-loc').value = entry.location||'';
+  document.getElementById('ml-f-toll-amt').value = entry.amount||'';
+  document.getElementById('ml-f-toll-route').value = entry.route||'';
+
+  ['odometer','fuel','parking','tollway'].forEach(t=>{
+    document.getElementById('ml-fields-'+t).style.display = t===entry.type?'block':'none';
+  });
+
+  if(entry.type==='fuel') setMLFuelPay(mlFuelPay);
+
+  document.getElementById('ml-modal').classList.remove('hidden');
+}
+
+function setMLFuelPay(pay){
+  mlFuelPay = pay;
+  const fleetBtn = document.getElementById('ml-fleet-btn');
+  const personalBtn = document.getElementById('ml-personal-btn');
+  if(!fleetBtn) return;
+  fleetBtn.style.background = pay==='fleet'?'var(--blue)':'var(--white)';
+  fleetBtn.style.color = pay==='fleet'?'#fff':'var(--text)';
+  fleetBtn.style.border = pay==='fleet'?'2px solid var(--blue)':'2px solid var(--border)';
+  personalBtn.style.background = pay==='personal'?'var(--amber)':'var(--white)';
+  personalBtn.style.color = pay==='personal'?'#fff':'var(--text)';
+  personalBtn.style.border = pay==='personal'?'2px solid var(--amber)':'2px solid var(--border)';
+}
+
+async function saveMLEntry(){
+  if(!db){ showToast('Firebase not connected'); return; }
+  const date = document.getElementById('ml-f-date').value;
+  const time = document.getElementById('ml-f-time').value;
+  const note = document.getElementById('ml-f-note').value.trim();
+  if(!date||!time){ showToast('Please set date and time'); return; }
+
+  let entry = { engineerName:engName, type:mlCurrentType, date, time, note, updatedAt:Date.now() };
+
+  if(mlCurrentType==='odometer'){
+    const odo = parseFloat(document.getElementById('ml-f-odo').value);
+    if(!odo){ showToast('Please enter odometer reading'); return; }
+    entry.odometer = odo;
+    entry.location = document.getElementById('ml-f-odo-loc').value.trim();
+  } else if(mlCurrentType==='fuel'){
+    const amt = parseFloat(document.getElementById('ml-f-fuel-amt').value);
+    if(!amt){ showToast('Please enter fuel amount'); return; }
+    entry.amount = amt;
+    entry.fuelPay = mlFuelPay;
+    entry.liters = parseFloat(document.getElementById('ml-f-fuel-liters').value)||0;
+  } else if(mlCurrentType==='parking'){
+    const amt = parseFloat(document.getElementById('ml-f-park-amt').value);
+    if(!amt){ showToast('Please enter parking amount'); return; }
+    entry.amount = amt;
+    entry.location = document.getElementById('ml-f-park-loc').value.trim();
+  } else if(mlCurrentType==='tollway'){
+    const amt = parseFloat(document.getElementById('ml-f-toll-amt').value);
+    if(!amt){ showToast('Please enter tollway amount'); return; }
+    entry.amount = amt;
+    entry.route = document.getElementById('ml-f-toll-route').value.trim();
+  }
+
+  try{
+    if(mlEditKey){
+      await db.ref('mileage_logs/'+mlEditKey.date+'/'+mlEditKey.key).update(entry);
+      showToast('✅ Entry updated');
+    } else {
+      entry.createdAt = Date.now();
+      await db.ref('mileage_logs/'+date).push(entry);
+      showToast('✅ Entry saved');
+    }
+    mlEditKey = null;
+    closeMLModal();
+    loadMLEntries();
+  } catch(e){ showToast('❌ Error: '+e.message); }
+}
+
+async function deleteMLEntry(){
+  if(!mlEditKey) return;
+  if(!confirm('Delete this entry?')) return;
+  await db.ref('mileage_logs/'+mlEditKey.date+'/'+mlEditKey.key).remove();
+  showToast('Entry deleted');
+  mlEditKey = null;
+  closeMLModal();
+  loadMLEntries();
+}
+
+function closeMLModal(e){
+  if(!e||e.target===document.getElementById('ml-modal')){
+    document.getElementById('ml-modal').classList.add('hidden');
+    mlEditKey = null;
+  }
+}
+
+async function exportMLCSV(){
+  const info = getMLMonthInfo();
+  const entries = mlTab==='mine' ? mlEntries.filter(e=>e.engineerName===engName) : mlEntries;
+  if(!entries.length){ showToast('No data to export'); return; }
+
+  const rows = [['Engineer','Date','Time','Type','Odometer (km)','Location/Route','Amount (฿)','Paid By','Liters','Note']];
+  entries.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||'')).forEach(e=>{
+    rows.push([
+      e.engineerName, e.date, e.time||'', e.type,
+      e.type==='odometer'?(e.odometer||''):'',
+      e.location||e.route||'',
+      e.amount||'',
+      e.type==='fuel'?(e.fuelPay==='fleet'?'Fleet Card':'Personal'):e.type==='odometer'?'':`Personal`,
+      e.liters||'',
+      e.note||''
+    ]);
+  });
+
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`MEDPAC_Mileage_${info.label.replace(' ','_')}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV downloaded!');
+}
+
+
+// ── Job List Screen (standalone) ──
+let jobFilter2 = 'all';
+
+function filterJobs2(filter){
+  jobFilter2 = filter;
+  ['all','pending','in-progress','done'].forEach(f=>{
+    const btn = document.getElementById('jf2-'+f);
+    if(btn){
+      btn.style.background = f===filter?'var(--blue)':'var(--white)';
+      btn.style.color = f===filter?'#fff':'var(--text)';
+      btn.style.border = f===filter?'none':'1px solid var(--border)';
+    }
+  });
+  renderJobs2();
+}
+
+function renderJobs2(){
+  const el = document.getElementById('job-list-container2');
+  if(!el) return;
+  const filtered = jobFilter2==='all' ? allJobs : allJobs.filter(j=>j.status===jobFilter2);
+  if(!filtered.length){
+    el.innerHTML = `<div class="empty">No ${jobFilter2==='all'?'':''+jobFilter2+' '}jobs yet</div>`;
+    return;
+  }
+  const statusIcon = s=>s==='done'?'🟢':s==='in-progress'?'🟡':'🔴';
+  const statusLabel = s=>s==='done'?'Done':s==='in-progress'?'In Progress':'Pending';
+  const statusColor = s=>s==='done'?'var(--green)':s==='in-progress'?'var(--amber)':'var(--red)';
+  el.innerHTML = filtered.map(j=>{
+    const isOpen = !j.assignee;
+    const dueDate = j.dueDate ? new Date(j.dueDate+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short'}) : '';
+    const overdue = j.dueDate && j.status!=='done' && j.dueDate < new Date().toISOString().split('T')[0];
+    return `<div class="card" style="margin-bottom:10px;padding:14px;${j.status==='done'?'opacity:.6':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700">${j.title}</div>
+          ${j.customer?`<div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${j.customer}</div>`:''}
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <span style="font-size:11px;font-weight:700;color:${statusColor(j.status)}">${statusIcon(j.status)} ${statusLabel(j.status)}</span>
+            ${j.jobType?`<span style="font-size:11px;background:var(--blue-lt);color:var(--blue);padding:2px 6px;border-radius:10px">${j.jobType}</span>`:''}
+            ${dueDate?`<span style="font-size:11px;background:${overdue?'var(--red-lt)':'var(--surface)'};color:${overdue?'var(--red)':'var(--muted)'};padding:2px 6px;border-radius:10px">${overdue?'⚠️ ':''}Due ${dueDate}</span>`:''}
+          </div>
+          ${j.assignee?`<div style="font-size:12px;color:var(--blue);margin-top:6px;font-weight:600">👤 ${j.assignee}</div>`:
+            `<div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600">🟢 Open — anyone can take this</div>`}
+          ${j.desc?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${j.desc}</div>`:''}
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">By ${j.createdBy||'unknown'}</div>
+        </div>
+        <button onclick="openEditJob('${j.key}')" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:12px;cursor:pointer;flex-shrink:0">Edit</button>
+      </div>
+      ${j.status!=='done'?`
+      <div style="display:flex;gap:8px;margin-top:12px">
+        ${j.status==='pending'?`<button onclick="updateJobStatus('${j.key}','in-progress')" style="flex:1;padding:8px;background:var(--amber-lt);color:var(--amber);border:1px solid var(--amber);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">🟡 Start</button>`:''}
+        ${j.status==='pending'&&isOpen?`<button onclick="assignJobToMe('${j.key}')" style="flex:1;padding:8px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">👋 Take</button>`:''}
+        <button onclick="updateJobStatus('${j.key}','done')" style="flex:1;padding:8px;background:var(--green-lt);color:var(--green);border:1px solid var(--green);border-radius:var(--rs);font-size:12px;font-weight:700;cursor:pointer">✅ Done</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', init);
