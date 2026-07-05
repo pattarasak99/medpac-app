@@ -459,6 +459,14 @@ table.pt input:focus{outline:none;border-color:var(--blue)}
     </div>
   </div>
 
+  <!-- Standalone clear customer signature button -->
+  <div style="max-width:680px;margin:0 auto;padding:0 12px 12px">
+    <button onclick="clearSig('cust-sig','cust')" style="width:100%;padding:12px;background:#FEE2E2;border:1.5px solid #FCA5A5;border-radius:10px;color:#DC2626;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Clear Customer Signature
+    </button>
+  </div>
+
   <div class="bottom-bar" style="flex-direction:column;gap:8px;padding-bottom:calc(12px + env(safe-area-inset-bottom))">
     <div style="display:flex;gap:8px;width:100%">
       <button class="btn-reset" onclick="confirmReset()" style="flex:0 0 auto;padding:13px 16px">
