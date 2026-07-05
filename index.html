@@ -301,10 +301,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <!-- DASHBOARD -->
 <div id="dashboard-screen" class="screen">
-  <div class="page-body">
+  <!-- Header with tabs -->
+  <div style="background:var(--blue);padding:14px 16px">
+    <div style="font-size:17px;font-weight:700;color:#fff;margin-bottom:10px">📊 Team Dashboard</div>
+    <div style="display:flex;gap:8px">
+      <button id="dash-tab-today" onclick="switchDashTab('today')" style="flex:1;padding:8px;background:#fff;color:var(--blue);border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Today</button>
+      <button id="dash-tab-monthly" onclick="switchDashTab('monthly')" style="flex:1;padding:8px;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:var(--rs);font-size:13px;font-weight:700;cursor:pointer">Monthly</button>
+    </div>
+  </div>
+
+  <!-- TODAY tab -->
+  <div id="dash-today-tab" class="page-body">
     <div style="padding:4px 0 12px">
-      <div style="font-size:18px;font-weight:800">📊 Team Dashboard</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px" id="dash-date-label"></div>
+      <div style="font-size:13px;color:var(--muted)" id="dash-date-label"></div>
     </div>
     <div class="stat-grid">
       <div class="stat-card">
@@ -324,6 +333,50 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="sec-hd">Timeline</div>
       <div id="dash-timeline"><div class="empty">No activity yet</div></div>
     </div>
+  </div>
+
+  <!-- MONTHLY tab -->
+  <div id="dash-monthly-tab" class="page-body" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div class="sec-hd">Select Date Range</div>
+      <!-- Quick presets -->
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button onclick="setDashPreset('month')" style="padding:6px 12px;background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📅 This Month</button>
+        <button onclick="setDashPreset('billing')" style="padding:6px 12px;background:var(--amber-lt);color:var(--amber);border:1px solid var(--amber);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 26th–25th</button>
+        <button onclick="setDashPreset('last7')" style="padding:6px 12px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">Last 7 Days</button>
+      </div>
+      <!-- Date range inputs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">From</label>
+          <input type="date" id="dash-from" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">To</label>
+          <input type="date" id="dash-to" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;margin-top:3px;box-sizing:border-box">
+        </div>
+      </div>
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px">
+        <button onclick="loadDashMonthly()" style="flex:1;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer">👁 View All</button>
+        <button onclick="exportDashMonthly()" style="flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:var(--rs);font-size:14px;font-weight:700;cursor:pointer">⬇ Export CSV</button>
+      </div>
+    </div>
+
+    <!-- Monthly summary stats -->
+    <div class="stat-grid" id="dash-monthly-stats" style="display:none">
+      <div class="stat-card">
+        <div class="stat-num" id="dash-m-engineers">0</div>
+        <div class="stat-label">Engineers</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="dash-m-days">0</div>
+        <div class="stat-label">Working Days</div>
+      </div>
+    </div>
+
+    <!-- Monthly attendance list -->
+    <div id="dash-monthly-list"><div class="empty">Select month and tap View</div></div>
   </div>
 </div>
 
@@ -2822,6 +2875,238 @@ async function exportMLRange(){
   const a = document.createElement('a');
   a.href=url;
   a.download=`MEDPAC_Mileage_${fromVal}_to_${toVal}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ CSV downloaded!');
+}
+
+// ── Dashboard Monthly ──
+let dashCurrentTab = 'today';
+
+function switchDashTab(tab){
+  dashCurrentTab = tab;
+  const todayTab = document.getElementById('dash-today-tab');
+  const monthlyTab = document.getElementById('dash-monthly-tab');
+  const todayBtn = document.getElementById('dash-tab-today');
+  const monthlyBtn = document.getElementById('dash-tab-monthly');
+
+  if(tab==='today'){
+    todayTab.style.display='block';
+    monthlyTab.style.display='none';
+    todayBtn.style.background='#fff';
+    todayBtn.style.color='var(--blue)';
+    monthlyBtn.style.background='rgba(255,255,255,.2)';
+    monthlyBtn.style.color='#fff';
+  } else {
+    todayTab.style.display='none';
+    monthlyTab.style.display='block';
+    todayBtn.style.background='rgba(255,255,255,.2)';
+    todayBtn.style.color='#fff';
+    monthlyBtn.style.background='#fff';
+    monthlyBtn.style.color='var(--blue)';
+    initDashMonthSelectors();
+  }
+}
+
+function initDashMonthSelectors(){
+  // Auto-fill billing cycle preset on first open
+  const fromEl = document.getElementById('dash-from');
+  if(!fromEl || fromEl.value) return;
+  setDashPreset('billing');
+}
+
+function setDashPreset(type){
+  const now = new Date();
+  let from, to;
+  if(type==='month'){
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  } else if(type==='billing'){
+    // 26th of last month to 25th of this month
+    from = new Date(now.getFullYear(), now.getMonth()-1, 26);
+    to = new Date(now.getFullYear(), now.getMonth(), 25);
+    showToast('📅 Billing cycle: 26th–25th');
+  } else if(type==='last7'){
+    to = new Date(now);
+    from = new Date(now); from.setDate(now.getDate()-6);
+  }
+  document.getElementById('dash-from').value = from.toISOString().split('T')[0];
+  document.getElementById('dash-to').value = to.toISOString().split('T')[0];
+}
+
+async function loadDashMonthly(){
+  const fromVal = document.getElementById('dash-from').value;
+  const toVal = document.getElementById('dash-to').value;
+  if(!fromVal || !toVal){ showToast('Please select From and To dates'); return; }
+  if(fromVal > toVal){ showToast('From date must be before To date'); return; }
+
+  const listEl = document.getElementById('dash-monthly-list');
+  const fmt = d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  listEl.innerHTML = `<div class="empty">⏳ Loading ${fmt(fromVal)} – ${fmt(toVal)}...</div>`;
+  document.getElementById('dash-monthly-stats').style.display='none';
+
+  if(!db){ listEl.innerHTML='<div class="empty">Firebase not connected</div>'; return; }
+
+  // Get all dates in range
+  const dates = [];
+  const start = new Date(fromVal+'T00:00:00');
+  const end = new Date(toVal+'T00:00:00');
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    dates.push(d.toISOString().split('T')[0]);
+  }
+
+  const snaps = await Promise.all(dates.map(date=>db.ref('checkins/'+date).once('value')));
+
+  const byDate = {};
+  const allEngineers = new Set();
+  let hasData = false;
+
+  snaps.forEach((snap, idx)=>{
+    const date = dates[idx];
+    const dayRecords = {};
+    snap.forEach(child=>{
+      const r = child.val();
+      if(!r.name) return;
+      hasData = true;
+      allEngineers.add(r.name);
+      if(!dayRecords[r.name]) dayRecords[r.name] = [];
+      dayRecords[r.name].push({
+        type: r.type, time: r.time||'',
+        addr: r.addr||'', lat: r.lat||'', lon: r.lon||''
+      });
+    });
+    Object.values(dayRecords).forEach(recs=>recs.sort((a,b)=>a.time.localeCompare(b.time)));
+    if(Object.keys(dayRecords).length > 0) byDate[date] = dayRecords;
+  });
+
+  if(!hasData){
+    listEl.innerHTML = '<div class="empty">No check-in records for '+monthName+' '+year+'</div>';
+    return;
+  }
+
+  // Update stats
+  document.getElementById('dash-monthly-stats').style.display='grid';
+  document.getElementById('dash-m-engineers').textContent = allEngineers.size;
+  document.getElementById('dash-m-days').textContent = Object.keys(byDate).length;
+
+  // Render grouped by day most recent first
+  const sortedDates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  listEl.innerHTML = sortedDates.map(date=>{
+    const d = new Date(date+'T00:00:00');
+    const dayLabel = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+    const engineers = Object.entries(byDate[date]).sort((a,b)=>a[0].localeCompare(b[0]));
+
+    const engRows = engineers.map(([name, recs])=>{
+      const ins = recs.filter(r=>r.type==='in');
+      const outs = recs.filter(r=>r.type==='out');
+      const firstIn = ins[0];
+      const lastOut = outs[outs.length-1];
+      const hrs = firstIn && lastOut ? calcDur(firstIn.time, lastOut.time) : '';
+      const isActive = recs[recs.length-1]?.type==='in';
+
+      const eventRows = recs.map(r=>{
+        const isIn = r.type==='in';
+        const mapLink = (r.lat && r.lon) ? `https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=17/${r.lat}/${r.lon}` : '';
+        return `<div style="display:flex;align-items:flex-start;gap:8px;padding:3px 0">
+          <span style="font-size:12px;font-weight:700;color:${isIn?'var(--green)':'var(--red)'};width:58px;flex-shrink:0">${isIn?'▶':'■'} ${r.time}</span>
+          <div style="flex:1;font-size:11px;color:var(--muted)">
+            ${r.addr||'No location'}
+            ${mapLink?`<a href="${mapLink}" target="_blank" style="color:var(--blue);font-weight:600;margin-left:4px">Map ↗</a>`:''}
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <span style="font-size:13px;font-weight:700">${name}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            ${hrs?`<span style="font-size:11px;color:var(--muted)">${hrs}</span>`:''}
+            <span class="badge ${isActive?'badge-green':'badge-gray'}">${isActive?'Active':'Done'}</span>
+          </div>
+        </div>
+        ${eventRows}
+      </div>`;
+    }).join('');
+
+    const activeCount = engineers.filter(([,recs])=>recs[recs.length-1]?.type==='in').length;
+    const doneCount = engineers.filter(([,recs])=>recs.some(r=>r.type==='out')).length;
+
+    return `<div class="card" style="margin-bottom:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:2px solid var(--border)">
+        <div style="font-size:14px;font-weight:800;color:var(--blue)">📅 ${dayLabel}</div>
+        <div style="display:flex;gap:6px">
+          ${activeCount>0?`<span class="badge badge-green">${activeCount} Active</span>`:''}
+          ${doneCount>0?`<span class="badge badge-gray">${doneCount} Done</span>`:''}
+        </div>
+      </div>
+      ${engRows}
+    </div>`;
+  }).join('');
+}
+
+async function exportDashMonthly(){
+  const fromVal = document.getElementById('dash-from').value;
+  const toVal = document.getElementById('dash-to').value;
+  if(!fromVal || !toVal){ showToast('Please select date range first'); return; }
+
+  if(!db){ showToast('Firebase not connected'); return; }
+  showToast('⏳ Loading data...');
+
+  // Get all dates in range
+  const dates = [];
+  const start = new Date(fromVal+'T00:00:00');
+  const end = new Date(toVal+'T00:00:00');
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  const monthName = fromVal+' to '+toVal;
+
+  const snaps = await Promise.all(dates.map(date=>db.ref('checkins/'+date).once('value')));
+
+  // Build flat list of all records
+  const rows = [['Engineer','Date','Type','Time','Location','Lat','Lon','Total Hours (first in → last out)']];
+  
+  // Group by date+engineer to calculate total hours
+  const byDateEng = {};
+  snaps.forEach((snap, idx)=>{
+    const date = dates[idx];
+    snap.forEach(child=>{
+      const r = child.val();
+      if(!r.name) return;
+      const key = date+'|'+r.name;
+      if(!byDateEng[key]) byDateEng[key] = {name:r.name, date, records:[]};
+      byDateEng[key].records.push({type:r.type||'', time:r.time||'', addr:r.addr||'', lat:r.lat||'', lon:r.lon||''});
+    });
+  });
+
+  // Sort and build rows
+  Object.values(byDateEng)
+    .sort((a,b)=>a.date.localeCompare(b.date)||a.name.localeCompare(b.name))
+    .forEach(({name, date, records})=>{
+      records.sort((a,b)=>a.time.localeCompare(b.time));
+      const ins = records.filter(r=>r.type==='in');
+      const outs = records.filter(r=>r.type==='out');
+      const firstIn = ins[0];
+      const lastOut = outs[outs.length-1];
+      const totalHrs = firstIn && lastOut ? calcDur(firstIn.time, lastOut.time) : '';
+
+      records.forEach((r, i)=>{
+        rows.push([
+          name, date, r.type==='in'?'Check In':'Check Out',
+          r.time, r.addr, r.lat, r.lon,
+          i===0 ? totalHrs : '' // only show total on first row per engineer per day
+        ]);
+      });
+    });
+
+  if(rows.length === 1){ showToast('No data for '+monthName+' '+year); return; }
+
+  const csv = rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  a.download=`MEDPAC_Attendance_${fromVal}_to_${toVal}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('✅ CSV downloaded!');
