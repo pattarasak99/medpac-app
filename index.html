@@ -2128,6 +2128,7 @@ function loadJobsRealtime(){
   if(jobsListener){
     console.log('Reusing existing listener, allJobs='+allJobs.length);
     renderJobs(allJobs);
+    renderJobs2();
     return;
   }
   console.log('Attaching new Firebase listener for service_jobs');
@@ -2138,6 +2139,7 @@ function loadJobsRealtime(){
     allJobs = newJobs;
     console.log('Firebase jobs update: '+allJobs.length+' jobs');
     renderJobs(allJobs);
+    renderJobs2(); // also update standalone job list screen
   }, err=>{ console.error('Jobs error:', err); showToast('Error: '+err.message); });
 }
 
@@ -2301,7 +2303,9 @@ async function saveJob(){
     }
     editingJobKey = null;
     closeJobModal();
-    // Real-time listener handles updates automatically — no manual reload needed
+    // Force fresh Firebase fetch after save
+    if(jobsListener){ db.ref('service_jobs').off('value', jobsListener); jobsListener=null; }
+    loadJobsRealtime();
   } catch(e){
     console.error('saveJob error:', e);
     showToast('❌ Error saving job: '+e.message);
