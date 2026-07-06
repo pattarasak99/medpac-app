@@ -2221,18 +2221,29 @@ function renderJobs(jobs){
 
 async function updateJobStatus(key, status){
   if(!db) return;
+  // Update locally first for instant UI response
+  const job = allJobs.find(j=>j.key===key);
+  if(job){
+    job.status = status;
+    renderJobs(allJobs);
+    renderJobs2();
+  }
+  // Then save to Firebase
   await db.ref('service_jobs/'+key).update({
     status,
     updatedAt: Date.now(),
     updatedBy: engName||'unknown'
   });
   showToast(status==='done'?'✅ Job marked as done!':'🟡 Job started!');
-  // real-time listener handles UI update
 }
 
 async function assignJobToMe(key){
   if(!engName){ showToast('Set your name first'); return; }
   if(!db) return;
+  // Update locally first
+  const job = allJobs.find(j=>j.key===key);
+  if(job){ job.assignee=engName; job.status='in-progress'; renderJobs(allJobs); renderJobs2(); }
+  // Save to Firebase
   await db.ref('service_jobs/'+key).update({
     assignee: engName,
     status: 'in-progress',
@@ -2240,7 +2251,6 @@ async function assignJobToMe(key){
     updatedBy: engName
   });
   showToast('👋 Job assigned to you & started!');
-  // real-time listener handles UI update
 }
 
 function openAddJob(){
